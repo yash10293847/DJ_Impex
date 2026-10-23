@@ -23,8 +23,21 @@ export function allowedOrigins(): Set<string> {
       throw new SecurityError(503, "Security configuration is unavailable.");
     }
   }
-  // These are set by Vercel, never taken from request Host/Forwarded headers.
-  if (process.env.VERCEL && process.env.VERCEL_URL) origins.add(`https://${process.env.VERCEL_URL}`);
+  // VERCEL_URL is the individual deployment address, not the stable production
+  // alias. Both are platform configuration, never request Host/Forwarded input.
+  if (process.env.VERCEL) {
+    const domains = [process.env.VERCEL_URL];
+    // This variable also exists in previews: do not trust production origins in
+    // a preview just because Vercel exposes the production project's address.
+    if (process.env.VERCEL_ENV === "production") domains.push(process.env.VERCEL_PROJECT_PRODUCTION_URL);
+    for (const domain of domains) {
+      if (!domain) continue;
+      if (!/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i.test(domain)) {
+        throw new SecurityError(503, "Security configuration is unavailable.");
+      }
+      origins.add(`https://${domain.toLowerCase()}`);
+    }
+  }
   if (!process.env.VERCEL && process.env.NODE_ENV !== "production") {
     origins.add("http://localhost:3001");
     origins.add("http://127.0.0.1:3001");

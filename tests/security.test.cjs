@@ -160,6 +160,38 @@ test("S10: request limits work without a Content-Length header", async () => {
   await assert.rejects(request.readLimitedBody(new Request("https://audit.example", { method: "POST", body: stream, duplex: "half" }), 10), (e) => e.status === 413);
 });
 
+test("S08: production accepts the Vercel stable alias without trusting request hosts", () => {
+  const env = { NODE_ENV: "production", VERCEL: "1", VERCEL_ENV: "production",
+    APP_ORIGIN: "https://canonical.example", VERCEL_URL: "deployment-123.vercel.app",
+    VERCEL_PROJECT_PRODUCTION_URL: "dj-impex.vercel.app" };
+  const request = createLoader({ env }).load(modulePath("request"));
+  for (const origin of [env.APP_ORIGIN, `https://${env.VERCEL_URL}`, `https://${env.VERCEL_PROJECT_PRODUCTION_URL}`]) {
+    request.assertSameOrigin(new Headers({ origin, "sec-fetch-site": "same-origin" }));
+  }
+  for (const headers of [
+    { origin: "https://dj-impex.vercel.app.attacker.example", host: "dj-impex.vercel.app" },
+    { origin: "https://attacker.example", host: "attacker.example", "x-forwarded-host": "attacker.example" },
+    { origin: "http://dj-impex.vercel.app" },
+    { host: "dj-impex.vercel.app" },
+    { origin: "https://dj-impex.vercel.app", "sec-fetch-site": "cross-site" },
+    { origin: "https://dj-impex.vercel.app", "sec-fetch-site": "same-site" },
+  ]) assert.throws(() => request.assertSameOrigin(new Headers(headers)), (e) => e.status === 403);
+});
+
+test("S08: production aliases are not implicitly accepted in previews or local runtimes", () => {
+  for (const env of [
+    { NODE_ENV: "production", VERCEL: "1", VERCEL_ENV: "preview", VERCEL_URL: "preview-123.vercel.app", VERCEL_PROJECT_PRODUCTION_URL: "dj-impex.vercel.app" },
+    { NODE_ENV: "test", VERCEL_ENV: "production", VERCEL_PROJECT_PRODUCTION_URL: "dj-impex.vercel.app" },
+  ]) {
+    const request = createLoader({ env }).load(modulePath("request"));
+    assert.throws(() => request.assertSameOrigin(new Headers({ origin: "https://dj-impex.vercel.app", "sec-fetch-site": "same-origin" })), (e) => e.status === 403);
+  }
+  for (const domain of ["attacker.example/path", "trusted.example@attacker.example", "https://dj-impex.vercel.app", "dj-impex.vercel.app?x=1"]) {
+    const config = createLoader({ env: { NODE_ENV: "production", VERCEL: "1", VERCEL_ENV: "production", VERCEL_PROJECT_PRODUCTION_URL: domain } }).load(modulePath("config"));
+    assert.throws(() => config.allowedOrigins(), (e) => e.status === 503);
+  }
+});
+
 test("S01: all 16 direct admin API operations deny access before collection or body access", async () => {
   let reads = 0;
   class StoreError extends Error {}

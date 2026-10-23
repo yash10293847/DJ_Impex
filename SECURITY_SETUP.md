@@ -34,6 +34,7 @@ The login screen's existing password-change modal now requires a verified sessio
 
 ## Persistent state and limits
 
+- Origin validation accepts the configured canonical origin and Vercel's individual deployment URL. In a Vercel production deployment, it also accepts the platform-provided `VERCEL_PROJECT_PRODUCTION_URL`, so the stable production alias works without trusting request Host/Forwarded headers. Previews do not implicitly accept the production alias. Keep `APP_ORIGIN` set explicitly for any additional canonical address.
 - The token in the cookie is random, 256-bit opaque data. Only its SHA-256 hash and absolute expiration are stored. Every private request verifies it against storage; there is no cross-request in-memory authentication cache.
 - Normal sessions last at most 24 hours; remembered sessions at most 30 days. At most 20 sessions are retained. Logout persistently revokes the current session before reporting success. Cookies are HttpOnly, SameSite=Lax and Secure in production, with the `__Host-` prefix and Path=/.
 - Scrypt uses N=131072, r=8, p=1, a random salt and an asynchronous server derivation. Each in-flight derivation needs approximately 128 MiB. Keep an adequate Vercel function memory allocation; shared limits run before expensive password work.
