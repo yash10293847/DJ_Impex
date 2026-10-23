@@ -22,6 +22,8 @@ Set these yourself in the appropriate Vercel environment. Never use a `NEXT_PUBL
 
 ### Provision the initial credential locally
 
+On Windows, setup uses PowerShell's native secure prompt and displays asterisks as you type. If an older setup process is stuck at a completely blank prompt, press Ctrl+C and rerun `npm run security:setup` with the updated script. The password passes to the hashing process through stdin, never command arguments or environment variables. Other platforms retain hidden input.
+
 Run `npm run security:setup` yourself in an interactive terminal. The command prompts twice with hidden input, enforces 12–256 characters, and writes `.security/bootstrap.env` using exclusive creation. It does not print passwords, hashes or secrets. The generated directory is ignored by Git; it is not a public asset.
 
 Privately transfer the two generated values into your Vercel settings, and into `.env.local` only if local development needs them. The application does not automatically load `.security/bootstrap.env`. Protect that file with your operating system's access controls; Windows does not enforce POSIX mode bits. The setup command refuses to overwrite it.

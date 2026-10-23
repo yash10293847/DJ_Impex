@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:security": "node --test tests/security.test.cjs",
+    "test:security": "node --test tests/security.test.cjs tests/security-setup.test.mjs",
     "security:scan": "node scripts/security-scan.mjs",
     "security:setup": "node scripts/security-setup.mjs",
     "test:production": "node scripts/security-http-test.mjs"
