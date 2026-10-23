@@ -203,7 +203,7 @@ function AdminPanel({ children, pathname }: { children: React.ReactNode; pathnam
                       D J Impex Admin
                     </p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      admin@djimpex.in
+                      Signed-in administrator
                     </p>
                   </div>
 

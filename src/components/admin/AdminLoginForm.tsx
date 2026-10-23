@@ -93,8 +93,12 @@ export function AdminLoginForm() {
                 id="admin-email"
                 type="email"
                 name="email"
-                defaultValue="admin@djimpex.in"
-                placeholder="admin@djimpex.in"
+                required
+                maxLength={254}
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="Enter your admin email"
                 className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-navy placeholder:text-slate-400 focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none transition shadow-xs"
               />
             </div>
@@ -110,6 +114,8 @@ export function AdminLoginForm() {
                   type={showPassword ? "text" : "password"}
                   name="password"
                   required
+                  maxLength={256}
+                  autoComplete="current-password"
                   placeholder="••••••••••••"
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 pr-10 text-sm text-navy placeholder:text-slate-400 focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none transition shadow-xs"
                 />

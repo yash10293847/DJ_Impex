@@ -37,7 +37,7 @@ function fixture(extra = {}) {
   const cookieOptions = [];
   const cookies = { get: (name) => jar.has(name) ? { value: jar.get(name) } : undefined,
     set: (name, value, options) => { jar.set(name, value); cookieOptions.push(options); }, delete: (name) => jar.delete(name) };
-  const env = { NODE_ENV: "test", APP_ORIGIN: "https://audit.example", ADMIN_PASSWORD_HASH: hash, SECURITY_SECRET: randomBytes(32).toString("hex"), ...extra.env };
+  const env = { NODE_ENV: "test", APP_ORIGIN: "https://audit.example", ADMIN_EMAIL: "administrator@example.org", ADMIN_PASSWORD_HASH: hash, SECURITY_SECRET: randomBytes(32).toString("hex"), ...extra.env };
   const mocks = {
     "@/lib/admin/storage": io,
     "src/lib/admin/storage/index.ts": io,
@@ -115,9 +115,62 @@ test("S02/S05: password change requires an authenticated session; missing Origin
 test("S05: login limits run inside the action before hashing and cannot be bypassed by a path", async () => {
   const f = fixture(); const actions = f.load("src/app/actions/admin-auth.ts");
   const data = new FormData(); data.set("password", randomBytes(32).toString("hex"));
-  for (let i = 0; i < 5; i++) assert.match((await actions.loginAdminAction({}, data)).error, /Invalid password/);
+  for (let i = 0; i < 5; i++) {
+    data.set("email", i % 2 ? f.env.ADMIN_EMAIL : "wrong@example.org");
+    assert.match((await actions.loginAdminAction({}, data)).error, /Invalid email or password/);
+  }
   const another = f.another().load("src/app/actions/admin-auth.ts");
   assert.match((await another.loginAdminAction({}, data)).error, /Too many requests/);
+});
+
+test("login requires both credentials on the server and uses one failure message", async () => {
+  const f = fixture(); const actions = f.load("src/app/actions/admin-auth.ts");
+  const data = new FormData(); data.set("password", f.password);
+  const invalid = "Invalid email or password. Please try again.";
+  assert.equal((await actions.loginAdminAction({}, data)).error, invalid);
+  data.set("email", "wrong@example.org");
+  assert.equal((await actions.loginAdminAction({}, data)).error, invalid);
+  data.set("email", f.env.ADMIN_EMAIL); data.set("password", "synthetic-wrong-password");
+  assert.equal((await actions.loginAdminAction({}, data)).error, invalid);
+  data.set("email", new File(["synthetic"], "email.txt")); data.set("password", f.password);
+  assert.equal((await actions.loginAdminAction({}, data)).error, invalid);
+  assert.equal(f.jar.size, 0);
+  assert.equal(f.io.docs.has("security/admin.json"), false);
+  data.set("email", `  ${f.env.ADMIN_EMAIL.toUpperCase()}  `); data.set("remember", "on");
+  await assert.rejects(actions.loginAdminAction({}, data), (e) => e.destination === "/admin/images");
+  assert.ok(await f.another().load(modulePath("session")).currentSession());
+  assert.equal(f.cookieOptions.at(-1).maxAge, 30 * 86400);
+});
+
+test("missing or malformed ADMIN_EMAIL fails closed without revealing configuration", async () => {
+  const f = fixture(); const actions = f.load("src/app/actions/admin-auth.ts");
+  const data = new FormData(); data.set("email", "administrator@example.org"); data.set("password", f.password);
+  for (const value of [undefined, "", "not-an-email"]) {
+    f.env.ADMIN_EMAIL = value;
+    assert.equal((await actions.loginAdminAction({}, data)).error, "Administrator access is temporarily unavailable. Please try again later.");
+    assert.equal(f.jar.size, 0);
+    assert.equal(f.io.docs.has("security/admin.json"), false);
+  }
+});
+
+test("wrong email still verifies the password and cannot create a session", async () => {
+  let verified = 0;
+  const f = fixture({ mocks: { "@/lib/security/password": {
+    verifyPassword: async () => { verified++; return true; },
+  } } });
+  const data = new FormData(); data.set("email", "wrong@example.org"); data.set("password", f.password);
+  const result = await f.load("src/app/actions/admin-auth.ts").loginAdminAction({}, data);
+  assert.equal(result.error, "Invalid email or password. Please try again.");
+  assert.equal(verified, 1); assert.equal(f.jar.size, 0);
+});
+
+test("admin identity validation bounds input and normalizes configured and submitted addresses", () => {
+  const identity = createLoader({ env: { ADMIN_EMAIL: "  Owner@Example.org  " } }).load(modulePath("identity"));
+  assert.equal(identity.configuredAdminEmail(), "owner@example.org");
+  assert.equal(identity.normalizeAdminEmail(" OWNER@EXAMPLE.ORG "), "owner@example.org");
+  for (const value of [null, undefined, 42, "", "owner", "a".repeat(255), "owner@example.org\r\nInjected: yes"]) {
+    assert.equal(identity.normalizeAdminEmail(value), null);
+  }
 });
 
 test("S05/S06/S18: independent instances share atomic limits including simultaneous first creation", async () => {

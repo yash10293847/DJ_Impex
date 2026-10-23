@@ -202,7 +202,7 @@ export function ChangePasswordModal({
 
             {/* Hint / Backup recovery note */}
             <div className="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-500 dark:bg-slate-800/60 dark:text-slate-400 leading-relaxed">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">Note:</span> If you completely lost your current password, check <code className="rounded bg-slate-200/70 px-1 py-0.5 text-[10px] dark:bg-slate-700 font-mono">ADMIN_PASSWORD</code> in your project settings or contact support at <a href="mailto:admin@djimpex.in" className="text-[#52968e] underline">admin@djimpex.in</a>.
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Note:</span> Changing your password requires a signed-in session and your current password. If you have forgotten it, contact the site owner for recovery.
             </div>
 
             {/* Modal Actions */}

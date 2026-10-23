@@ -7,6 +7,7 @@ import { SecurityError, securityEvent } from "@/lib/security/errors";
 import { assertSameOrigin, clientIdentifier } from "@/lib/security/request";
 import { consumeLimits } from "@/lib/security/rate-limit";
 import { hashPassword, verifyPassword } from "@/lib/security/password";
+import { configuredAdminEmail, normalizeAdminEmail } from "@/lib/security/identity";
 import { createSession, currentSession, readAuth, replacePassword, requireAdmin, revokeSession } from "@/lib/security/session";
 
 export type AuthState = { error?: string; success?: boolean };
@@ -31,9 +32,14 @@ export async function loginAdminAction(_previous: AuthState | null, formData: Fo
   try {
     // Enforced inside the action, regardless of the pathname used to invoke it.
     await checkAttempt("login");
+    const expectedEmail = configuredAdminEmail();
+    const email = normalizeAdminEmail(formData.get("email"));
     const password = String(formData.get("password") ?? "");
     const auth = await readAuth();
-    if (!(await verifyPassword(password, auth.passwordHash))) return { error: "Invalid password. Please try again." };
+    // Verify the password even for a different email so validly formatted
+    // account guesses do not skip the expensive verification step.
+    const passwordValid = await verifyPassword(password, auth.passwordHash);
+    if (email !== expectedEmail || !passwordValid) return { error: "Invalid email or password. Please try again." };
     await createSession(auth.passwordHash, formData.get("remember") === "on");
   } catch (error) { return safeFailure(error); }
   redirect("/admin/images");
