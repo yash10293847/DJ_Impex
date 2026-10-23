@@ -3,6 +3,7 @@ import "server-only";
 import { blobDriver } from "./blob-driver";
 import { fileSystemDriver } from "./fs-driver";
 import type { StorageDriver } from "./driver";
+import { SecurityError } from "@/lib/security/errors";
 
 /**
  * Blob when a token is configured, the filesystem otherwise.
@@ -12,6 +13,9 @@ import type { StorageDriver } from "./driver";
  * data/ and public/uploads where they can be read, diffed and committed.
  */
 export function storage(): StorageDriver {
+  if ((process.env.VERCEL || process.env.NODE_ENV === "production") && !process.env.BLOB_READ_WRITE_TOKEN) {
+    throw new SecurityError(503, "Persistent storage is not configured.");
+  }
   return process.env.BLOB_READ_WRITE_TOKEN ? blobDriver : fileSystemDriver;
 }
 

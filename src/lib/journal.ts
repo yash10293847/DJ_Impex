@@ -1,3 +1,4 @@
+import { securityEvent } from "@/lib/security/errors";
 import "server-only";
 
 import readingTime from "reading-time";
@@ -48,10 +49,10 @@ async function panelPosts(): Promise<JournalPost[]> {
   try {
     const blogs = await readCollection("blogs");
     return blogs.filter((blog) => blog.status === "published").map(toPost);
-  } catch (error) {
+  } catch {
     // The journal is the agency's copy first. If the panel's store is
     // unreachable the MDX posts still render, rather than the page failing.
-    console.error("[journal] Could not read posts from the admin store:", error);
+    securityEvent("journal_store_unavailable");
     return [];
   }
 }

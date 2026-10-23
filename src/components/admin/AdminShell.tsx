@@ -24,9 +24,10 @@ export const THEME_CLASS = "admin-dark";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (pathname === "/admin/login") {
-    return <>{children}</>;
-  }
+  return pathname === "/admin/login" ? <>{children}</> : <AdminPanel pathname={pathname}>{children}</AdminPanel>;
+}
+
+function AdminPanel({ children, pathname }: { children: React.ReactNode; pathname: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);

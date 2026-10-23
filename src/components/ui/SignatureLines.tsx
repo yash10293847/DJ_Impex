@@ -8,6 +8,8 @@ import { X, ZoomIn } from "lucide-react";
 
 import { withReg } from "@/components/ui/Reg";
 
+const subscribeMounted = () => () => {};
+
 export type ProductSwatch = {
   id?: string;
   name: string;
@@ -90,17 +92,13 @@ export function SignatureLines({
 }) {
   const isDesktop = useMediaQuery("(min-width: 64rem)");
   const [open, setOpen] = useState(0); // Default to 01 Nabeen Classic
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeMounted, () => true, () => false);
   const [zoomedProduct, setZoomedProduct] = useState<{
     product: ProductSwatch;
     collectionName: string;
   } | null>(null);
   const id = useId();
   const reduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!zoomedProduct) return;

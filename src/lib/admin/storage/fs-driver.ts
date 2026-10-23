@@ -1,7 +1,8 @@
 import "server-only";
 
 import { createReadStream } from "node:fs";
-import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rmdir, stat, unlink, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
 import { Readable } from "node:stream";
 
@@ -29,13 +30,16 @@ function isMissing(error: unknown): boolean {
 }
 
 function docPath(key: string): string {
-  // Keys look like "collections/blogs.json"; only the basename is used.
-  return path.join(DATA_DIR, path.basename(key));
+  if (/^collections\/(images|blogs|slots|enquiries)\.json$/.test(key)) return path.join(DATA_DIR, path.basename(key));
+  if (/^security\/(admin|rate-(auth|contact|recipient|mutation))\.json$/.test(key)) {
+    return path.join(process.cwd(), ".security", path.basename(key));
+  }
+  throw new Error("Invalid document key.");
 }
 
 /** Refuse anything that is not a plain name directly inside the uploads folder. */
 export function safeMediaPath(name: string): string | null {
-  if (!name || name.includes("/") || name.includes("\\") || name.includes("\0")) return null;
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,200}$/.test(name) || name.includes("..")) return null;
   const resolved = path.resolve(UPLOAD_DIR, name);
   if (path.dirname(resolved) !== path.resolve(UPLOAD_DIR)) return null;
   return resolved;
@@ -43,8 +47,7 @@ export function safeMediaPath(name: string): string | null {
 
 async function versionOf(target: string): Promise<string | null> {
   try {
-    const info = await stat(target);
-    return `${info.mtimeMs}-${info.size}`;
+    return createHash("sha256").update(await readFile(target)).digest("hex");
   } catch (error) {
     if (isMissing(error)) return null;
     throw error;
@@ -53,9 +56,9 @@ async function versionOf(target: string): Promise<string | null> {
 
 async function writeAtomic(target: string, body: Buffer | string): Promise<void> {
   await mkdir(path.dirname(target), { recursive: true });
-  const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
+  const temp = `${target}.${randomUUID()}.tmp`;
   try {
-    await writeFile(temp, body);
+    await writeFile(temp, body, { mode: 0o600 });
     await rename(temp, target);
   } catch (error) {
     await unlink(temp).catch(() => {});
@@ -79,8 +82,8 @@ export const fileSystemDriver: StorageDriver = {
   async readDoc(key) {
     const target = docPath(key);
     try {
-      const text = await readFile(target, "utf8");
-      return { text, version: await versionOf(target) };
+      const bytes = await readFile(target);
+      return { text: bytes.toString("utf8"), version: createHash("sha256").update(bytes).digest("hex") };
     } catch (error) {
       if (isMissing(error)) return null;
       throw error;
@@ -89,8 +92,22 @@ export const fileSystemDriver: StorageDriver = {
 
   async writeDoc(key, text, expected) {
     const target = docPath(key);
-    if (expected !== null && (await versionOf(target)) !== expected) throw new VersionConflict();
-    await writeAtomic(target, text);
+    await mkdir(path.dirname(target), { recursive: true });
+    const lock = `${target}.lock`;
+    // Local development also needs cross-process CAS, including first creation.
+    let locked = false;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      try { await mkdir(lock); locked = true; break; }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    }
+    if (!locked) throw new VersionConflict();
+    try {
+      if ((await versionOf(target)) !== expected) throw new VersionConflict();
+      await writeAtomic(target, text);
+    } finally { await rmdir(lock); }
   },
 
   async readMedia(name): Promise<StoredMedia | null> {

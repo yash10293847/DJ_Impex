@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -55,6 +56,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 import { ExploreNabeenCTA } from "@/components/ui/ExploreNabeenCTA";
 
 export default async function JournalPostPage({ params }: Params) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const { slug } = await params;
   const post = await getJournalPost(slug);
   if (!post) notFound();
@@ -82,8 +84,8 @@ export default async function JournalPostPage({ params }: Params) {
 
       <ExploreNabeenCTA bg={more.length > 0 ? "bg-mist" : "bg-white"} />
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(articleJsonLd(post))} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(breadcrumbJsonLd(post))} />
+      <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(articleJsonLd(post))} />
+      <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(breadcrumbJsonLd(post))} />
     </>
   );
 }

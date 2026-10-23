@@ -1,3 +1,4 @@
+import { securityEvent } from "@/lib/security/errors";
 import "server-only";
 
 import { revalidatePath } from "next/cache";
@@ -16,8 +17,8 @@ import { revalidatePath } from "next/cache";
 function safely(path: string, type?: "page" | "layout"): void {
   try {
     revalidatePath(path, type);
-  } catch (error) {
-    console.error("[admin] Could not revalidate %s:", path, error);
+  } catch {
+    securityEvent("revalidation_failed");
   }
 }
 

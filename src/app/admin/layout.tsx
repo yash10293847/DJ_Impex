@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -16,10 +17,11 @@ export const metadata: Metadata = {
  */
 const THEME_SCRIPT = `try{if(localStorage.getItem("nabeen-admin-theme")==="dark"){document.documentElement.classList.add("admin-dark")}}catch(e){}`;
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <>
-      <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <AdminShell>{children}</AdminShell>
     </>
   );

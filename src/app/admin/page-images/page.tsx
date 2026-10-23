@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/security/session";
 import { SlotManager } from "@/components/admin/SlotManager";
 import { resolveSlots } from "@/lib/slots";
 
@@ -13,6 +14,7 @@ const isManagedElsewhere = (slot: { id: string }) =>
 // there is no error state to render here: the worst case is the page showing
 // the design's own images, which is what the site would be showing too.
 export default async function AdminPageImages() {
+  await requireAdminPage();
   const slots = await resolveSlots();
   return <SlotManager initial={slots.filter((slot) => !isManagedElsewhere(slot))} />;
 }

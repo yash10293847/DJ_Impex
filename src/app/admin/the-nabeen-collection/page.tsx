@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/security/session";
 import type { Metadata } from "next";
 
 import { HomeCollectionManager } from "@/components/admin/HomeCollectionManager";
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminTheNabeenCollectionPage() {
+  await requireAdminPage();
   const slots = await resolveSlots();
   return <HomeCollectionManager initial={slots} />;
 }

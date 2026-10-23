@@ -1,3 +1,4 @@
+import { guardAdminRequest } from "@/lib/admin/api";
 import { fail, handleError, ok, parseBody } from "@/lib/admin/api";
 import { imagePatchSchema } from "@/lib/admin/schemas";
 import { revalidateGallery } from "@/lib/admin/revalidate";
@@ -9,6 +10,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Context) {
   try {
+    await guardAdminRequest(request);
     const { id } = await params;
     const parsed = await parseBody(request, imagePatchSchema);
     if (parsed.response) return parsed.response;
@@ -31,6 +33,7 @@ export async function PATCH(request: Request, { params }: Context) {
 
 export async function DELETE(_request: Request, { params }: Context) {
   try {
+    await guardAdminRequest(_request);
     const { id } = await params;
 
     // The row goes first, under the lock; the file follows. If the unlink fails

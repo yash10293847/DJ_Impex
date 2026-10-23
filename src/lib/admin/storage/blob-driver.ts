@@ -1,6 +1,6 @@
 import "server-only";
 
-import { BlobNotFoundError, BlobPreconditionFailedError, del, get, put } from "@vercel/blob";
+import { BlobNotFoundError, BlobPreconditionFailedError, BlobError, del, get, put } from "@vercel/blob";
 
 import { VersionConflict, type StorageDriver, type StoredMedia } from "./driver";
 
@@ -16,7 +16,8 @@ import { VersionConflict, type StorageDriver, type StoredMedia } from "./driver"
  *
  *  - `useCache: false` on every read. Blob serves through a CDN by default, and
  *    an admin panel that shows a stale list after a save is worse than a slow
- *    one. Writes set cacheControlMaxAge to 0 for the same reason.
+ *    one. Writes use the SDK's minimum 60-second cache lifetime; reads bypass
+ *    that cache so authorization and conditional updates use current state.
  *
  *  - Documents are written with `ifMatch`, so a write fails rather than
  *    silently overwriting an edit made since the read. That is genuine
@@ -41,7 +42,7 @@ function strongEtag(etag: string): string {
 }
 
 function mediaKey(name: string): string | null {
-  if (!name || name.includes("/") || name.includes("\\") || name.includes("\0")) return null;
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,200}$/.test(name) || name.includes("..")) return null;
   return `${MEDIA_PREFIX}${name}`;
 }
 
@@ -71,15 +72,14 @@ export const blobDriver: StorageDriver = {
         access: "private",
         contentType: "application/json",
         addRandomSuffix: false,
-        allowOverwrite: true,
-        cacheControlMaxAge: 0,
-        // No expected version means "this document should not exist yet", which
-        // is the seeding path. Two instances seeding at once write the same
-        // bytes, so letting both through is harmless.
+        // Creation is conditional too: a racing seed must not overwrite data.
+        allowOverwrite: expected !== null,
+        cacheControlMaxAge: 60,
         ...(expected === null ? {} : { ifMatch: expected }),
       });
     } catch (error) {
-      if (error instanceof BlobPreconditionFailedError) throw new VersionConflict();
+      if (error instanceof BlobPreconditionFailedError ||
+          (error instanceof BlobError && /already exists/i.test(error.message))) throw new VersionConflict();
       throw error;
     }
   },
@@ -88,7 +88,7 @@ export const blobDriver: StorageDriver = {
     const key = mediaKey(name);
     if (!key) return null;
     try {
-      const result = await get(key, { access: "private" });
+      const result = await get(key, { access: "private", useCache: false });
       if (!result || result.statusCode !== 200) return null;
       return { stream: result.stream, contentType: result.blob.contentType };
     } catch (error) {
@@ -104,7 +104,7 @@ export const blobDriver: StorageDriver = {
       access: "private",
       contentType,
       addRandomSuffix: false,
-      allowOverwrite: true,
+      allowOverwrite: false,
     });
   },
 

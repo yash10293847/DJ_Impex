@@ -1,3 +1,4 @@
+import { securityEvent } from "@/lib/security/errors";
 import { storage } from "@/lib/admin/storage";
 
 export const dynamic = "force-dynamic";
@@ -17,12 +18,15 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,200}$/.test(name) || name.includes("..")) {
+    return new Response("Not found.", { status: 404 });
+  }
 
   let media;
   try {
-    media = await storage().readMedia(decodeURIComponent(name));
-  } catch (error) {
-    console.error("[media] Could not read %s:", name, error);
+    media = await storage().readMedia(name);
+  } catch {
+    securityEvent("media_read_failed");
     return new Response("Not available.", { status: 500 });
   }
 
@@ -41,6 +45,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ nam
       // person already saw, keep theirs for an hour.
       "cache-control": "public, max-age=3600, s-maxage=60, stale-while-revalidate=60",
       "content-disposition": "inline",
+      "content-security-policy": "default-src 'none'; sandbox; frame-ancestors 'none'",
       "x-content-type-options": "nosniff",
     },
   });

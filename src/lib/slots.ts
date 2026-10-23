@@ -1,3 +1,4 @@
+import { securityEvent } from "@/lib/security/errors";
 import "server-only";
 
 import { readCollection } from "@/lib/admin/store";
@@ -401,8 +402,8 @@ export async function resolveSlots(): Promise<ResolvedSlot[]> {
         },
       ]),
     );
-  } catch (error) {
-    console.error("[slots] Could not read the replacements, using the defaults:", error);
+  } catch {
+    securityEvent("slots_store_unavailable");
   }
 
   return IMAGE_SLOTS.map((slot) => {

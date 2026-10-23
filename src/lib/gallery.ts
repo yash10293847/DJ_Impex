@@ -1,3 +1,4 @@
+import { securityEvent } from "@/lib/security/errors";
 import "server-only";
 
 import { getGalleryImages, type GalleryImage } from "@/lib/content";
@@ -25,8 +26,8 @@ export async function getGalleryTiles(): Promise<GalleryImage[]> {
     return rows
       .filter((image) => image.usage === "gallery")
       .map((image) => ({ src: image.src, name: image.title, alt: image.alt }));
-  } catch (error) {
-    console.error("[gallery] Could not read images from the admin store:", error);
+  } catch {
+    securityEvent("gallery_store_unavailable");
     return getGalleryImages();
   }
 }

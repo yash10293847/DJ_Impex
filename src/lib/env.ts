@@ -8,4 +8,4 @@
  *
  * Facts with status `hold` never render, in any environment.
  */
-export const showTodo = process.env.NEXT_PUBLIC_SHOW_TODO === "true";
+export const showTodo = process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_SHOW_TODO === "true";

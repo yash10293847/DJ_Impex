@@ -1,3 +1,4 @@
+import { securityEvent } from "@/lib/security/errors";
 import "server-only";
 
 import type { Testimonial } from "@/lib/site";
@@ -197,12 +198,7 @@ async function fetchPlace(): Promise<PlaceSnapshot> {
       // place id, a rejected field mask or a key restriction, and they are not
       // distinguishable without the body. This was failing on every home page
       // request with nothing in the log but "400".
-      const detail = await response.text().catch(() => "");
-      console.error(
-        "[google-reviews] Google Places request failed: %s %s",
-        response.status,
-        detail.slice(0, 400),
-      );
+      securityEvent("reviews_provider_failed");
       return EMPTY;
     }
 
@@ -239,8 +235,8 @@ async function fetchPlace(): Promise<PlaceSnapshot> {
         : null;
 
     return { reviews, rating };
-  } catch (error) {
-    console.error("[google-reviews] Unable to retrieve Google reviews:", error);
+  } catch {
+    securityEvent("reviews_unavailable");
     return EMPTY;
   }
 }

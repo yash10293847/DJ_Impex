@@ -1,13 +1,16 @@
+import { readMultipart } from "@/lib/security/request";
+import { validateMedia } from "@/lib/security/upload";
+import { guardAdminRequest } from "@/lib/admin/api";
 import { fail, handleError, ok } from "@/lib/admin/api";
 import { revalidateSlots } from "@/lib/admin/revalidate";
-import type { AdminSlot, SlotHistoryItem } from "@/lib/admin/schemas";
+import { slotPatchSchema, type AdminSlot, type SlotHistoryItem } from "@/lib/admin/schemas";
 import { mutate, nowIso, saveUpload, UPLOAD_URL_BASE } from "@/lib/admin/store";
 import { IMAGE_SLOTS, resolveSlots } from "@/lib/slots";
 
 export const dynamic = "force-dynamic";
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 30 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 4 * 1024 * 1024;
 
 const ALLOWED_IMAGES = new Map([
   ["image/jpeg", ".jpg"],
@@ -22,8 +25,9 @@ const ALLOWED_VIDEOS = new Map([
   ["video/quicktime", ".mov"],
 ]);
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    await guardAdminRequest(request);
     return ok({ slots: await resolveSlots() });
   } catch (error) {
     return handleError("slots:list", error);
@@ -32,8 +36,10 @@ export async function GET() {
 
 /** Put a new image/video and/or text metadata into a slot. */
 export async function POST(request: Request) {
+  let newUpload: string | null = null;
   try {
-    const form = await request.formData();
+    await guardAdminRequest(request);
+    const form = await readMultipart(request);
     const id = String(form.get("id") ?? "");
     const slot = IMAGE_SLOTS.find((entry) => entry.id === id);
     if (!slot) return fail("That media slot does not exist.", 404);
@@ -47,13 +53,16 @@ export async function POST(request: Request) {
     const description = form.has("description") ? String(form.get("description") ?? "").trim() : undefined;
     const weave = form.has("weave") ? String(form.get("weave") ?? "").trim() : undefined;
 
+    const metadata = slotPatchSchema.safeParse({ title, alt, description, weave });
+    if (!metadata.success) return fail("Please check the text field lengths.", 400);
+
     let fileName: string | null = null;
     let src: string = slot.defaultSrc;
 
     if (hasFile) {
       const maxBytes = isVideoSlot ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
       if (file.size > maxBytes) {
-        return fail(`That file is ${(file.size / 1024 / 1024).toFixed(1)}MB. The limit is ${isVideoSlot ? "30MB" : "10MB"}.`, 413, {
+        return fail(`That file is ${(file.size / 1024 / 1024).toFixed(1)}MB. The limit is ${isVideoSlot ? "4MB" : "4MB"}.`, 413, {
           file: "The file is too large.",
         });
       }
@@ -72,9 +81,10 @@ export async function POST(request: Request) {
         );
       }
 
-      const bytes = Buffer.from(await file.arrayBuffer());
+      const bytes = await validateMedia(Buffer.from(await file.arrayBuffer()), file.type);
       const stem = file.name.replace(/\.[^.]*$/, "");
       fileName = await saveUpload(`${stem}${extension}`, bytes, file.type);
+      newUpload = fileName;
       src = `${UPLOAD_URL_BASE}/${fileName}`;
     }
 
@@ -122,6 +132,7 @@ export async function POST(request: Request) {
       };
     });
 
+    newUpload = null;
     if (droppedFileNames.length > 0) {
       const { deleteUpload } = await import("@/lib/admin/store");
       for (const f of droppedFileNames) {
@@ -148,6 +159,7 @@ export async function POST(request: Request) {
 
     return ok({ slot: resolved }, 201);
   } catch (error) {
+    if (newUpload) { const { deleteUpload } = await import("@/lib/admin/store"); await deleteUpload(newUpload); }
     return handleError("slots:replace", error);
   }
 }

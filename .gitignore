@@ -8,6 +8,7 @@ npm-debug.log*
 .env*
 !.env.example
 .vercel
+.security/
 next-env.d.ts
 /playwright-report
 /test-results
@@ -21,3 +22,9 @@ tsconfig.tsbuildinfo
 # that what is deployed matches what the panel shows; only the placeholder keeps
 # the empty directory in git.
 !public/uploads/.gitkeep
+
+# Existing tracked records are retained pending manual review; ignore future runtime files.
+/data/auth.json
+/data/enquiries.json
+/data/*.tmp
+/data/*.lock/

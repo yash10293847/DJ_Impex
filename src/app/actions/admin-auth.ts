@@ -1,178 +1,72 @@
 "use server";
 
-import crypto from "node:crypto";
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { storage } from "@/lib/admin/storage";
+import { SecurityError, securityEvent } from "@/lib/security/errors";
+import { assertSameOrigin, clientIdentifier } from "@/lib/security/request";
+import { consumeLimits } from "@/lib/security/rate-limit";
+import { hashPassword, verifyPassword } from "@/lib/security/password";
+import { createSession, currentSession, readAuth, replacePassword, requireAdmin, revokeSession } from "@/lib/security/session";
 
-const SESSION_COOKIE = "dji_admin_session";
-const DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD || "djimpex1995";
-const AUTH_DOC_KEY = "collections/auth.json";
+export type AuthState = { error?: string; success?: boolean };
 
-export type AuthState = {
-  error?: string;
-  success?: boolean;
-};
-
-type StoredAuth = {
-  passwordHash?: string;
-  updatedAt?: string;
-};
-
-function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
-  return `${salt}:${hash}`;
+function safeFailure(error: unknown): AuthState {
+  if (error instanceof SecurityError && error.status < 500) return { error: error.message };
+  securityEvent("admin_auth_unavailable");
+  return { error: "Administrator access is temporarily unavailable. Please try again later." };
 }
 
-function verifyPassword(password: string, stored: string): boolean {
-  if (stored.includes(":")) {
-    const [salt, key] = stored.split(":");
-    if (!salt || !key) return false;
-    try {
-      const keyBuffer = Buffer.from(key, "hex");
-      const derivedKey = crypto.scryptSync(password, salt, 64);
-      return crypto.timingSafeEqual(keyBuffer, derivedKey);
-    } catch {
-      return false;
-    }
-  }
-  // Constant time comparison for plaintext fallback
-  if (password.length !== stored.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(password), Buffer.from(stored));
+async function checkAttempt(purpose: "login" | "password"): Promise<void> {
+  const requestHeaders = await headers();
+  assertSameOrigin(requestHeaders);
+  const client = clientIdentifier(requestHeaders);
+  await consumeLimits("auth", [
+    { key: `${purpose}:ip:${client}`, limit: 5, windowMs: 15 * 60 * 1000 },
+    { key: `${purpose}:global`, limit: 60, windowMs: 15 * 60 * 1000 },
+  ]);
 }
 
-async function getStoredPassword(): Promise<{ passwordHash?: string; version: string | null }> {
+export async function loginAdminAction(_previous: AuthState | null, formData: FormData): Promise<AuthState> {
   try {
-    const doc = await storage().readDoc(AUTH_DOC_KEY);
-    if (!doc?.text) return { version: null };
-    const parsed = JSON.parse(doc.text) as StoredAuth;
-    return { passwordHash: parsed.passwordHash, version: doc.version };
-  } catch {
-    return { version: null };
-  }
-}
-
-export async function loginAdminAction(
-  _prevState: AuthState | null,
-  formData: FormData
-): Promise<AuthState> {
-  const password = formData.get("password")?.toString();
-  const remember = formData.get("remember") === "on";
-
-  if (!password) {
-    return { error: "Please enter your password." };
-  }
-
-  const { passwordHash } = await getStoredPassword();
-  const knownFallbacks = [
-    process.env.ADMIN_PASSWORD,
-    DEFAULT_PASSWORD,
-    "djimpex@!23",
-    "djimpex@123",
-    "djimpex1995",
-  ].filter(Boolean) as string[];
-
-  const isHashValid = passwordHash ? verifyPassword(password, passwordHash) : false;
-  const isFallbackValid = knownFallbacks.some((fb) => verifyPassword(password, fb));
-  const isValid = isHashValid || isFallbackValid;
-
-  if (!isValid) {
-    return { error: "Invalid password. Please verify and try again." };
-  }
-
-  // Set session cookie
-  const cookieStore = await cookies();
-  const maxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24; // 30 days vs 24 hours
-
-  cookieStore.set(SESSION_COOKIE, "authenticated", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge,
-    path: "/",
-  });
-
+    // Enforced inside the action, regardless of the pathname used to invoke it.
+    await checkAttempt("login");
+    const password = String(formData.get("password") ?? "");
+    const auth = await readAuth();
+    if (!(await verifyPassword(password, auth.passwordHash))) return { error: "Invalid password. Please try again." };
+    await createSession(auth.passwordHash, formData.get("remember") === "on");
+  } catch (error) { return safeFailure(error); }
   redirect("/admin/images");
 }
 
-export async function changeAdminPasswordAction(
-  _prevState: AuthState | null,
-  formData: FormData
-): Promise<AuthState> {
-  const oldPassword = formData.get("oldPassword")?.toString()?.trim() || "";
-  const newPassword = formData.get("newPassword")?.toString() || "";
-  const confirmPassword = formData.get("confirmPassword")?.toString() || "";
-
-  if (!oldPassword) {
-    return { error: "Please enter your current password." };
-  }
-  if (!newPassword) {
-    return { error: "Please enter a new password." };
-  }
-  if (newPassword.length < 8) {
-    return { error: "New password must be at least 8 characters long." };
-  }
-  if (newPassword !== confirmPassword) {
-    return { error: "New password and confirmation do not match." };
-  }
-
-  const { passwordHash, version } = await getStoredPassword();
-  const knownFallbacks = [
-    process.env.ADMIN_PASSWORD,
-    DEFAULT_PASSWORD,
-    "djimpex@!23",
-    "djimpex@123",
-    "djimpex1995",
-  ].filter(Boolean) as string[];
-
-  const isOldHashValid = passwordHash ? verifyPassword(oldPassword, passwordHash) : false;
-  const isOldFallbackValid = knownFallbacks.some((fb) => verifyPassword(oldPassword, fb));
-  const isOldValid = isOldHashValid || isOldFallbackValid;
-
-  if (!isOldValid) {
-    return { error: "Current (old) password is incorrect." };
-  }
-
-  const newHash = hashPassword(newPassword);
-  const authData: StoredAuth = {
-    passwordHash: newHash,
-    updatedAt: new Date().toISOString(),
-  };
-
+export async function changeAdminPasswordAction(_previous: AuthState | null, formData: FormData): Promise<AuthState> {
   try {
-    await storage().writeDoc(
-      AUTH_DOC_KEY,
-      JSON.stringify(authData, null, 2) + "\n",
-      version
-    );
-  } catch (error) {
-    console.error("[admin-auth] Could not save updated password:", error);
-    return { error: "Could not save the new password. Please try again." };
-  }
-
-  // Set authenticated session cookie
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, "authenticated", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-    path: "/",
-  });
-
-  return { success: true };
+    assertSameOrigin(await headers());
+    const session = await requireAdmin();
+    await checkAttempt("password");
+    const oldPassword = String(formData.get("oldPassword") ?? "");
+    const newPassword = String(formData.get("newPassword") ?? "");
+    const confirmation = String(formData.get("confirmPassword") ?? "");
+    if (newPassword.length < 12 || newPassword.length > 256) return { error: "Use a new password between 12 and 256 characters." };
+    if (newPassword !== confirmation) return { error: "New password and confirmation do not match." };
+    const auth = await readAuth();
+    if (!(await verifyPassword(oldPassword, auth.passwordHash))) return { error: "Current password is incorrect." };
+    const newHash = await hashPassword(newPassword);
+    await replacePassword(auth.passwordHash, newHash, session.tokenHash);
+    // All old sessions are revoked atomically; this device receives a fresh one.
+    await createSession(newHash, false);
+    return { success: true };
+  } catch (error) { return safeFailure(error); }
 }
 
-export async function logoutAdminAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE);
+export async function logoutAdminAction(): Promise<void> {
+  assertSameOrigin(await headers());
+  await requireAdmin();
+  // Do not claim successful logout if the persistent revocation failed.
+  await revokeSession();
   redirect("/admin/login");
 }
 
 export async function checkAdminSession(): Promise<boolean> {
-  const cookieStore = await cookies();
-  return cookieStore.has(SESSION_COOKIE);
+  return Boolean(await currentSession());
 }
-

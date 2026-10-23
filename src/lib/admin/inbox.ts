@@ -4,9 +4,10 @@ import type { Enquiry } from "@/lib/enquiry";
 
 import type { AdminEnquiry } from "./schemas";
 import { mutate, newId, nowIso } from "./store";
+import { securityEvent } from "@/lib/security/errors";
 
 /** Keep the file from growing without bound on a long-lived server. */
-const MAX_ROWS = 500;
+const MAX_ROWS = 5000;
 
 /**
  * Append a website enquiry to the panel's store, and say whether it landed.
@@ -37,10 +38,13 @@ export async function recordEnquiry(enquiry: Enquiry): Promise<boolean> {
   };
 
   try {
-    await mutate("enquiries", (rows) => ({ rows: [row, ...rows].slice(0, MAX_ROWS), result: null }));
+    await mutate("enquiries", (rows) => {
+      if (rows.length >= MAX_ROWS) throw new Error("Inbox capacity reached.");
+      return { rows: [row, ...rows], result: null };
+    });
     return true;
-  } catch (error) {
-    console.error("[enquiry] Could not append the enquiry to the panel's store:", error);
+  } catch {
+    securityEvent("enquiry_record_failed");
     return false;
   }
 }

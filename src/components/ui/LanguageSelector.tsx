@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Globe, ChevronDown, Check, Search } from "lucide-react";
 
 export type Language = {
@@ -75,8 +75,35 @@ export const LANGUAGES: Language[] = [
 declare global {
   interface Window {
     googleTranslateElementInit?: () => void;
-    google?: any;
+    google?: { translate?: { TranslateElement?: new (options: { pageLanguage: string; autoDisplay: boolean }, elementId: string) => unknown } };
   }
+}
+
+function subscribeLanguage(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+function readLanguage(): string {
+  try {
+    const saved = localStorage.getItem("nabeen_lang") || "en";
+    return LANGUAGES.some((language) => language.code === saved) ? saved : "en";
+  } catch { return "en"; }
+}
+function applyLanguage(lang: string): void {
+  const hostname = window.location.hostname;
+  if (lang === "en") {
+    document.cookie = "googtrans=; Max-Age=0; path=/;";
+    document.cookie = `googtrans=; Max-Age=0; path=/; domain=.${hostname};`;
+  } else {
+    document.cookie = `googtrans=/en/${lang}; path=/;`;
+    document.cookie = `googtrans=/auto/${lang}; path=/;`;
+    if (hostname !== "localhost") {
+      document.cookie = `googtrans=/en/${lang}; path=/; domain=.${hostname};`;
+      document.cookie = `googtrans=/auto/${lang}; path=/; domain=.${hostname};`;
+    }
+  }
+  document.documentElement.dir = "ltr";
+  document.documentElement.lang = lang;
 }
 
 export function LanguageSelector({
@@ -88,7 +115,7 @@ export function LanguageSelector({
   onDark?: boolean;
   className?: string;
 }) {
-  const [currentLang, setCurrentLang] = useState<string>("en");
+  const currentLang = useSyncExternalStore(subscribeLanguage, readLanguage, () => "en");
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -133,9 +160,8 @@ export function LanguageSelector({
   // Initialize and load translation engine
   useEffect(() => {
     // 1. Detect saved language preference
-    const saved = localStorage.getItem("nabeen_lang") || "en";
+    const saved = readLanguage();
     if (saved) {
-      setCurrentLang(saved);
       document.documentElement.dir = "ltr";
       document.documentElement.lang = saved;
     }
@@ -177,31 +203,10 @@ export function LanguageSelector({
     setIsOpen(false);
     if (lang === currentLang) return;
 
-    setCurrentLang(lang);
     localStorage.setItem("nabeen_lang", lang);
 
-    const hostname = window.location.hostname;
-
-    if (lang === "en") {
-      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${hostname};`;
-      document.documentElement.dir = "ltr";
-      document.documentElement.lang = "en";
-      window.location.reload();
-      return;
-    }
-
-    // Set cookie for Google Translate
-    document.cookie = `googtrans=/en/${lang}; path=/;`;
-    document.cookie = `googtrans=/auto/${lang}; path=/;`;
-    if (hostname !== "localhost") {
-      document.cookie = `googtrans=/en/${lang}; path=/; domain=.${hostname};`;
-      document.cookie = `googtrans=/auto/${lang}; path=/; domain=.${hostname};`;
-    }
-
-    // Update HTML dir and lang
-    document.documentElement.dir = "ltr";
-    document.documentElement.lang = lang;
+    applyLanguage(lang);
+    if (lang === "en") { window.location.reload(); return; }
 
     // Trigger translate select if already rendered
     const select = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;

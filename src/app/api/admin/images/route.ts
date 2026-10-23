@@ -1,3 +1,6 @@
+import { readMultipart } from "@/lib/security/request";
+import { validateMedia } from "@/lib/security/upload";
+import { guardAdminRequest } from "@/lib/admin/api";
 import { fail, handleError, ok } from "@/lib/admin/api";
 import { revalidateGallery } from "@/lib/admin/revalidate";
 import { imageSchema, type AdminImage } from "@/lib/admin/schemas";
@@ -31,8 +34,9 @@ const ALLOWED = new Map([
   // cannot pass through next/image without dangerouslyAllowSVG.
 ]);
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    await guardAdminRequest(request);
     const images = await readCollection("images");
     return ok({ images });
   } catch (error) {
@@ -43,7 +47,8 @@ export async function GET() {
 /** Multipart upload: the file lands in public/uploads, the row in images.json. */
 export async function POST(request: Request) {
   try {
-    const form = await request.formData();
+    await guardAdminRequest(request);
+    const form = await readMultipart(request);
     const file = form.get("file");
 
     if (!(file instanceof File) || file.size === 0) {
@@ -89,7 +94,7 @@ export async function POST(request: Request) {
       return fail("Please check the highlighted fields.", 400, fieldErrors);
     }
 
-    const bytes = Buffer.from(await file.arrayBuffer());
+    const bytes = await validateMedia(Buffer.from(await file.arrayBuffer()), file.type);
     const stem = file.name.replace(/\.[^.]*$/, "");
     const fileName = await saveUpload(`${stem}${extension}`, bytes, file.type);
 

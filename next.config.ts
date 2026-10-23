@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { baselineHeaders } from "./src/lib/security/headers";
 
 const nextConfig: NextConfig = {
   // CLAUDE.md here is the client brief, not a generated file.
@@ -14,6 +15,10 @@ const nextConfig: NextConfig = {
     qualities: [75, 88],
   },
   poweredByHeader: false,
+  experimental: { serverActions: { bodySizeLimit: "64kb" } },
+  async headers() {
+    return [{ source: "/:path*", headers: Object.entries(baselineHeaders).map(([key, value]) => ({ key, value })) }];
+  },
   async redirects() {
     return [
       // /contact was a real page until 2026-09-23, when the enquiry form moved

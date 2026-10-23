@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import type { Metadata, Viewport } from "next";
 import { Open_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
@@ -75,7 +76,10 @@ export const viewport: Viewport = {
   colorScheme: "light",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const requestHeaders = await headers();
+  const nonce = requestHeaders.get("x-nonce") ?? undefined;
+  const isAdmin = requestHeaders.get("x-site-pathname")?.startsWith("/admin");
   return (
     // The font variable must live on <html>: tokens.css resolves --font-sans at :root,
     // so --font-open-sans has to be defined there or the whole value is invalid.
@@ -83,10 +87,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans">
         {/* The marketing chrome lives in (site)/layout.tsx, not here, so that
             /admin can render without a header, footer or preloader. */}
-        <TranslationProvider />
+        {!isAdmin && <TranslationProvider nonce={nonce} />}
         {children}
 
-        <Analytics />
+        {!isAdmin && <Analytics />}
       </body>
     </html>
   );

@@ -2,22 +2,13 @@
 
 import { headers } from "next/headers";
 import nodemailer from "nodemailer";
+import { escapedEnquiry, smtpConfiguration } from "@/lib/security/mail";
+import { assertSameOrigin, clientIdentifier, privateIdentifier } from "@/lib/security/request";
+import { consumeLimits } from "@/lib/security/rate-limit";
+import { SecurityError, securityEvent } from "@/lib/security/errors";
 
 import { recordEnquiry } from "@/lib/admin/inbox";
 import { enquirySchema, formDataToEnquiry, type Enquiry, type EnquiryState } from "@/lib/enquiry";
-
-const WINDOW_MS = 10 * 60 * 1000;
-const MAX_PER_WINDOW = 5;
-const recent = new Map<string, number[]>();
-
-function rateLimited(key: string): boolean {
-  const now = Date.now();
-  const hits = (recent.get(key) ?? []).filter((time) => now - time < WINDOW_MS);
-  hits.push(now);
-  recent.set(key, hits);
-  if (recent.size > 5000) recent.clear();
-  return hits.length > MAX_PER_WINDOW;
-}
 
 function asText(enquiry: Enquiry): string {
   const fullWhatsApp = `${enquiry.countryCode} ${enquiry.whatsappNumber}`;
@@ -33,7 +24,8 @@ function asText(enquiry: Enquiry): string {
   return rows.map(([label, value]) => `${label}: ${value}`).join("\n");
 }
 
-function getAdminHtml(enquiry: Enquiry): string {
+function getAdminHtml(input: Enquiry): string {
+  const enquiry = escapedEnquiry(input);
   const fullWhatsApp = `${enquiry.countryCode} ${enquiry.whatsappNumber}`;
   const cleanNumber = fullWhatsApp.replace(/[^0-9]/g, "");
   const rows = [
@@ -112,7 +104,8 @@ function getAdminHtml(enquiry: Enquiry): string {
 </html>`;
 }
 
-function getCustomerHtml(enquiry: Enquiry): string {
+function getCustomerHtml(input: Enquiry): string {
+  const enquiry = escapedEnquiry(input);
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
@@ -205,7 +198,14 @@ function getCustomerHtml(enquiry: Enquiry): string {
 </html>`;
 }
 
-export async function submitEnquiry(_previous: EnquiryState, formData: FormData): Promise<EnquiryState> {
+async function submitEnquiryInternal(formData: FormData): Promise<EnquiryState> {
+  const headerList = await headers();
+  assertSameOrigin(headerList);
+  if (String(formData.get("website") ?? "")) return { status: "success", message: "Enquiry received. Our team will contact you on WhatsApp shortly." };
+  await consumeLimits("contact", [
+    { key: `ip:${clientIdentifier(headerList)}`, limit: 5, windowMs: 10 * 60 * 1000 },
+    { key: "global", limit: 50, windowMs: 60 * 60 * 1000 },
+  ]);
   const parsed = enquirySchema.safeParse(formDataToEnquiry(formData));
 
   if (!parsed.success) {
@@ -231,14 +231,7 @@ export async function submitEnquiry(_previous: EnquiryState, formData: FormData)
     };
   }
 
-  const headerList = await headers();
-  const ip = headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (rateLimited(ip)) {
-    return {
-      status: "error",
-      message: "That is a lot of enquiries from one place. Please message us on WhatsApp instead.",
-    };
-  }
+  await consumeLimits("contact", [{ key: `duplicate:${privateIdentifier(JSON.stringify(enquiry))}`, limit: 1, windowMs: 5 * 60 * 1000 }]);
 
   // Store the enquiry before attempting the send, so a mail failure still
   // leaves the lead somewhere a person looks. It never throws.
@@ -270,53 +263,12 @@ export async function submitEnquiry(_previous: EnquiryState, formData: FormData)
           message: "We could not send your enquiry just now. Please message us on WhatsApp.",
         };
 
-  const rawUser = process.env.EMAIL_USER || process.env.SMTP_USER;
-  const rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
-  const smtpUser = rawUser?.replace(/^["']|["']$/g, "").trim() || "";
-  const smtpPass = rawPass?.replace(/^["']|["']$/g, "").replace(/\s+/g, "").trim() || "";
-  const smtpHost = (process.env.SMTP_HOST || "smtp.gmail.com").replace(/^["']|["']$/g, "").trim();
-  const smtpPort = Number((process.env.SMTP_PORT || "465").replace(/^["']|["']$/g, "").trim());
-
-  const enquiryTo = (
-    process.env.CONTACT_RECEIVER_EMAIL ||
-    process.env.ENQUIRY_TO_EMAIL ||
-    "admin@djimpex.in"
-  )
-    .replace(/^["']|["']$/g, "")
-    .trim();
-
-  // Crucial for SPF/DKIM delivery: The from address must match the authenticated account
-  const fromAddress = smtpUser || "admin@djimpex.in";
-  const enquiryFrom = `"Nabeen Luxury Fabrics" <${fromAddress}>`;
-
-  // No credentials, no email. This used to log the enquiry and then return
-  // success, which told the customer their enquiry had been sent when nothing
-  // had left the building: the only copy was one line in a server log, and on a
-  // serverless host those roll off. A form that lies about delivering is worse
-  // than a form that fails, because nobody goes looking for the lost ones.
-  //
-  // It now fails the way a send failure fails, which the form already handles:
-  // it shows the message and offers WhatsApp. The enquiry is still logged, at
-  // error level, so a misconfiguration is loud and the lead is recoverable from
-  // the logs while it is still there.
-  if (!smtpUser || !smtpPass) {
-    console.error(
-      "[enquiry] SMTP is not configured (EMAIL_USER / EMAIL_PASS are unset), so this enquiry was NOT sent:\n%s",
-      asText(enquiry),
-    );
-    return whenMailFails();
-  }
-
+  if (!stored) return whenMailFails();
   try {
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    });
+    if (process.env.CONTACT_EMAIL_ENABLED === "false") return whenMailFails();
+    const { transport, from, to: enquiryTo } = smtpConfiguration();
+    const enquiryFrom = { name: "Nabeen Luxury Fabrics", address: from };
+    const transporter = nodemailer.createTransport(transport);
 
     // 1. Send all enquiry details to the business
     await transporter.sendMail({
@@ -333,7 +285,13 @@ export async function submitEnquiry(_previous: EnquiryState, formData: FormData)
     });
 
     // 2. Send auto-reply confirmation to the customer (if email provided)
-    if (enquiry.email) {
+    let acknowledge = Boolean(enquiry.email);
+    if (acknowledge) {
+      try {
+        await consumeLimits("recipient", [{ key: privateIdentifier(enquiry.email.toLowerCase()), limit: 3, windowMs: 86400000 }]);
+      } catch { acknowledge = false; }
+    }
+    if (acknowledge) {
       const customerText = `Dear ${enquiry.fullName},\n\nThank you for reaching out to Nabeen®. We have received your enquiry regarding our luxury fabric collection.\n\nOur team is reviewing your requirements and will reach out to you directly on WhatsApp (${enquiry.countryCode} ${enquiry.whatsappNumber}).\n\nEnquiry Summary:\n- Fabrics of interest: ${enquiry.fabrics.length ? enquiry.fabrics.join(", ") : "General enquiry"}\n${enquiry.usage.length ? `- Usage: ${enquiry.usage.join(", ")}\n` : ""}${enquiry.message ? `- Message: ${enquiry.message}\n` : ""}\nWarm regards,\nThe Nabeen® Team\nD J Impex & Co., Mumbai`;
 
       await transporter.sendMail({
@@ -352,8 +310,8 @@ export async function submitEnquiry(_previous: EnquiryState, formData: FormData)
         },
       });
     }
-  } catch (error) {
-    console.error("[enquiry] Nodemailer send failed:", error);
+  } catch {
+    securityEvent("smtp_send_failed");
     return whenMailFails();
   }
 
@@ -361,4 +319,13 @@ export async function submitEnquiry(_previous: EnquiryState, formData: FormData)
     status: "success",
     message: "Enquiry received. Our team will contact you on WhatsApp shortly.",
   };
+}
+
+export async function submitEnquiry(_previous: EnquiryState, formData: FormData): Promise<EnquiryState> {
+  try { return await submitEnquiryInternal(formData); }
+  catch (error) {
+    if (error instanceof SecurityError && error.status < 500) return { status: "error", message: error.message };
+    securityEvent("enquiry_security_unavailable");
+    return { status: "error", message: "We could not receive your enquiry just now. Please message us on WhatsApp." };
+  }
 }

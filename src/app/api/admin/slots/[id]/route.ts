@@ -1,3 +1,5 @@
+import { readJson } from "@/lib/security/request";
+import { guardAdminRequest } from "@/lib/admin/api";
 import { fail, handleError, ok } from "@/lib/admin/api";
 import { revalidateSlots } from "@/lib/admin/revalidate";
 import { slotPatchSchema, type AdminSlot } from "@/lib/admin/schemas";
@@ -11,16 +13,12 @@ type Context = { params: Promise<{ id: string }> };
 /** Update text metadata for a slot. */
 export async function PATCH(request: Request, { params }: Context) {
   try {
+    await guardAdminRequest(request);
     const { id } = await params;
     const slot = IMAGE_SLOTS.find((entry) => entry.id === id);
     if (!slot) return fail("That slot does not exist.", 404);
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return fail("Invalid JSON payload.", 400);
-    }
+    const body = await readJson(request);
 
     const parsed = slotPatchSchema.safeParse(body);
     if (!parsed.success) {
@@ -71,6 +69,7 @@ export async function PATCH(request: Request, { params }: Context) {
 /** Restore a slot to its previous version (up to 3 revisions) or to original media. */
 export async function DELETE(_request: Request, { params }: Context) {
   try {
+    await guardAdminRequest(_request);
     const { id } = await params;
     const slot = IMAGE_SLOTS.find((entry) => entry.id === id);
     if (!slot) return fail("That media slot does not exist.", 404);

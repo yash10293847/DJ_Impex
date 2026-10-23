@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { ContactPopup } from "@/components/contact/ContactPopup";
 import { FloatingActions } from "@/components/contact/FloatingActions";
 import { WhatsAppModal } from "@/components/contact/WhatsAppModal";
@@ -21,7 +22,8 @@ import { jsonLdScript, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
  * not-found.tsx has to stay at the app root to catch unmatched URLs, so it
  * renders this directly rather than inheriting it.
  */
-export function SiteChrome({ children }: { children: React.ReactNode }) {
+export async function SiteChrome({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const site = getSite();
   const whatsapp = whatsappLink();
   const popupWhatsapp = whatsappLink(
@@ -62,8 +64,8 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       </OverlayProvider>
 
       {/* Organisation and WebSite markup describes the business and enables rich snippet indexing */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(organizationJsonLd())} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(websiteJsonLd())} />
+      <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(organizationJsonLd())} />
+      <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(websiteJsonLd())} />
     </>
   );
 }

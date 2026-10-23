@@ -1,3 +1,4 @@
+import { securityEvent } from "@/lib/security/errors";
 import type { MetadataRoute } from "next";
 
 import { getJournalPosts } from "@/lib/journal";
@@ -53,8 +54,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
       };
     });
-  } catch (err) {
-    console.error("[sitemap] Failed to load journal posts:", err);
+  } catch {
+    securityEvent("sitemap_journal_unavailable");
   }
 
   return [...staticPages, ...postEntries];

@@ -1,3 +1,4 @@
+import { guardAdminRequest } from "@/lib/admin/api";
 import { handleError, ok, parseBody } from "@/lib/admin/api";
 import { blogInputSchema, type AdminBlog } from "@/lib/admin/schemas";
 import { deriveExcerpt, slugify, uniqueSlug } from "@/lib/admin/derive";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    await guardAdminRequest(request);
     const status = new URL(request.url).searchParams.get("status");
     const blogs = await readCollection("blogs");
     const filtered =
@@ -20,6 +22,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await guardAdminRequest(request);
     const parsed = await parseBody(request, blogInputSchema);
     if (parsed.response) return parsed.response;
 

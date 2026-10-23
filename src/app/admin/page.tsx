@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/security/session";
 import { redirect } from "next/navigation";
 
 /**
@@ -9,6 +10,7 @@ import { redirect } from "next/navigation";
  * warning that enquiry email is not configured -- moved to the Enquiries
  * screen, where somebody wondering why no mail arrived is already looking.
  */
-export default function AdminIndex() {
+export default async function AdminIndex() {
+  await requireAdminPage();
   redirect("/admin/images");
 }

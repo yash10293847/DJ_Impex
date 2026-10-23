@@ -1,3 +1,4 @@
+import { guardAdminRequest } from "@/lib/admin/api";
 import { handleError, ok } from "@/lib/admin/api";
 import { ENQUIRY_STATUSES, type EnquiryStatus } from "@/lib/admin/schemas";
 import { readCollection } from "@/lib/admin/store";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   try {
+    await guardAdminRequest(request);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const query = (searchParams.get("q") ?? "").trim().toLowerCase();

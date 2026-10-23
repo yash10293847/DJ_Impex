@@ -8,7 +8,8 @@ import { z } from "zod";
  * over the panel.
  */
 
-const isoDate = z.string().min(4, "Please use a date.");
+const isoDate = z.string().max(40).refine((value) => /^\d{4}-\d{2}-\d{2}(?:T[0-9:.]+Z)?$/.test(value) && Number.isFinite(Date.parse(value)), "Please use a valid date.");
+const mediaUrl = z.string().trim().max(500).refine((value) => value === "" || /^\/(?:images|video|media|uploads)\/[a-zA-Z0-9_./%-]+$/.test(value) && !value.includes("..") && !/%(?:2e|2f|5c)/i.test(value), "Please choose a website image.");
 
 export const imageSchema = z.object({
   id: z.string(),
@@ -42,8 +43,8 @@ export const blogSchema = z.object({
   excerpt: z.string().trim().max(400).default(""),
   /** Shown above the title on the published post, beside the reading time. */
   category: z.string().trim().max(60).default(""),
-  content: z.string().default(""),
-  coverImage: z.string().trim().default(""),
+  content: z.string().max(100000).default(""),
+  coverImage: mediaUrl.default(""),
   author: z.string().trim().max(80).default(""),
   publishedDate: isoDate,
   status: z.enum(["draft", "published"]).default("draft"),
@@ -133,8 +134,8 @@ export const blogPatchSchema = z
     title: z.string().trim().min(1, "Please add a title.").max(160),
     excerpt: z.string().trim().max(400),
     category: z.string().trim().max(60),
-    content: z.string(),
-    coverImage: z.string().trim(),
+    content: z.string().max(100000),
+    coverImage: mediaUrl,
     author: z.string().trim().max(80),
     publishedDate: isoDate,
     status: z.enum(["draft", "published"]),

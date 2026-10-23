@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-export function TranslationProvider() {
+export function TranslationProvider({ nonce }: { nonce?: string }) {
   const pathname = usePathname();
 
   // 1. Initial mount: configure translation engine and load scripts
@@ -35,6 +35,7 @@ export function TranslationProvider() {
     if (!document.getElementById(scriptId)) {
       const script = document.createElement("script");
       script.id = scriptId;
+      if (nonce) script.nonce = nonce;
       script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
       script.async = true;
       document.body.appendChild(script);
@@ -64,7 +65,7 @@ export function TranslationProvider() {
     observer.observe(document.documentElement, { attributes: true });
 
     return () => observer.disconnect();
-  }, []);
+  }, [nonce]);
 
   // 2. On route change: ensure current page applies active language
   useEffect(() => {

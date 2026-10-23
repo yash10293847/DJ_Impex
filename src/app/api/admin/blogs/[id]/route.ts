@@ -1,3 +1,4 @@
+import { guardAdminRequest } from "@/lib/admin/api";
 import { fail, handleError, ok, parseBody } from "@/lib/admin/api";
 import { blogPatchSchema, type AdminBlog } from "@/lib/admin/schemas";
 import { deriveExcerpt, slugify, uniqueSlug } from "@/lib/admin/derive";
@@ -10,6 +11,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Context) {
   try {
+    await guardAdminRequest(_request);
     const { id } = await params;
     const blog = (await readCollection("blogs")).find((row) => row.id === id);
     if (!blog) return fail("That post is no longer in blogs.json.", 404);
@@ -21,6 +23,7 @@ export async function GET(_request: Request, { params }: Context) {
 
 export async function PATCH(request: Request, { params }: Context) {
   try {
+    await guardAdminRequest(request);
     const { id } = await params;
     const parsed = await parseBody(request, blogPatchSchema);
     if (parsed.response) return parsed.response;
@@ -69,6 +72,7 @@ export async function PATCH(request: Request, { params }: Context) {
 
 export async function DELETE(_request: Request, { params }: Context) {
   try {
+    await guardAdminRequest(_request);
     const { id } = await params;
     const removed = await mutate("blogs", (rows) => {
       const match = rows.find((row) => row.id === id);

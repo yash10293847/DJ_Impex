@@ -206,7 +206,7 @@ export const enquirySchema = z.object({
   /** Honeypot. Real people never fill this in; bots do. */
   website: z.string().max(0, "Something went wrong. Please try again.").optional().default(""),
   variant: z.enum(["full", "short"]).default("full"),
-  fullName: z.string().trim().min(2, "Please tell us your name.").max(100),
+  fullName: z.string().trim().min(2, "Please tell us your name.").max(100).regex(/^[^\r\n\x00-\x1f\x7f]+$/, "Please use a valid name."),
   countryCode: z
     .string()
     .trim()
@@ -219,10 +219,10 @@ export const enquirySchema = z.object({
     .max(20)
     .regex(/^[0-9\s()-]{5,20}$/, "Please use digits only for your WhatsApp number."),
   email: z
-    .union([z.literal(""), z.email("Please check this email address.")])
+    .union([z.literal(""), z.email("Please check this email address.").max(160)])
     .optional()
     .default(""),
-  fabrics: z.array(z.string()).max(12).optional().default([]),
+  fabrics: z.array(z.string().trim().min(1).max(120)).max(12).optional().default([]),
   usage: z
     .array(
       z.enum([
