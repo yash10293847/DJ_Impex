@@ -12,10 +12,10 @@ const env = { ...process.env, NODE_ENV: "production", CONTACT_EMAIL_ENABLED: "fa
 for (const name of readdirSync(".").filter((name) => /^\.env(?:\.|$)/.test(name))) {
   for (const line of readFileSync(name, "utf8").split(/\r?\n/)) {
     const match = /^([A-Z][A-Z0-9_]*)=/.exec(line);
-    if (match && /PASS|TOKEN|SECRET|API_KEY/.test(match[1]) && !match[1].startsWith("NEXT_PUBLIC_")) env[match[1]] = "";
+    if (match && /PASS|TOKEN|SECRET|API_KEY|ENCRYPTION_KEY/.test(match[1]) && !match[1].startsWith("NEXT_PUBLIC_")) env[match[1]] = "";
   }
 }
-for (const key of Object.keys(env)) if (/PASS|TOKEN|SECRET|API_KEY/.test(key) && !key.startsWith("NEXT_PUBLIC_")) env[key] = "";
+for (const key of Object.keys(env)) if (/PASS|TOKEN|SECRET|API_KEY|ENCRYPTION_KEY/.test(key) && !key.startsWith("NEXT_PUBLIC_")) env[key] = "";
 const child = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "--hostname", "127.0.0.1", "--port", String(port)], { env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
 let exited = false;
 child.on("exit", () => { exited = true; });
@@ -48,7 +48,7 @@ try {
   assert.ok(nonce); assert.ok(page.body.includes(`nonce="${nonce}"`));
   const nextPage = await check("/admin/login", 200);
   assert.notEqual(nextPage.response.headers.get("content-security-policy"), page.response.headers.get("content-security-policy"));
-  for (const route of ["/admin/enquiries", "/admin/blogs", "/admin/images", "/admin/page-images", "/admin/wear2care", "/admin/nabeen-collection", "/admin/the-nabeen-collection"]) {
+  for (const route of ["/admin/security", "/admin/enquiries", "/admin/blogs", "/admin/images", "/admin/page-images", "/admin/wear2care", "/admin/nabeen-collection", "/admin/the-nabeen-collection"]) {
     await check(route, 307, { headers: { cookie: "__Host-dji_admin_session=authenticated; dji_admin_session=authenticated" } });
   }
   await check("/admin/enquiries?_rsc=security-check", 307, { headers: { rsc: "1", "next-router-prefetch": "1", cookie: "__Host-dji_admin_session=authenticated", "x-nonce": "forged", "x-site-pathname": "/admin/login" } });

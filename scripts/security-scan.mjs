@@ -7,13 +7,13 @@ for (const name of readdirSync(".").filter((n) => n.startsWith(".env") && n !== 
   if (!statSync(name).isFile()) continue;
   for (const line of readFileSync(name, "utf8").split(/\r?\n/)) {
     const match = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line);
-    if (!match || !/PASS|TOKEN|SECRET|API_KEY/.test(match[1]) || match[1].startsWith("NEXT_PUBLIC_")) continue;
+    if (!match || !/PASS|TOKEN|SECRET|API_KEY|ENCRYPTION_KEY/.test(match[1]) || match[1].startsWith("NEXT_PUBLIC_")) continue;
     const value = match[2].trim().replace(/^['"]|['"]$/g, "");
     if (value.length >= 8) secrets.add(value);
   }
 }
 for (const [key, value] of Object.entries(process.env)) {
-  if (/PASS|TOKEN|SECRET|API_KEY/.test(key) && !key.startsWith("NEXT_PUBLIC_") && value?.length >= 8) secrets.add(value);
+  if (/PASS|TOKEN|SECRET|API_KEY|ENCRYPTION_KEY/.test(key) && !key.startsWith("NEXT_PUBLIC_") && value?.length >= 8) secrets.add(value);
 }
 let failures = 0;
 function check(name) {

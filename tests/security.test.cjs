@@ -53,6 +53,27 @@ function fixture(extra = {}) {
 }
 const modulePath = (name) => `src/lib/security/${name}.ts`;
 
+test("login diagnostics identify configuration failures without logging their values", async () => {
+  class DiagnosticSecurityError extends Error {
+    constructor(status, message) { super(message); this.status = status; }
+  }
+  for (const [env, stage] of [
+    [{ SECURITY_SECRET: undefined }, "client_identifier"],
+    [{ ADMIN_EMAIL: undefined }, "admin_identity"],
+    [{ ADMIN_PASSWORD_HASH: undefined }, "auth_document"],
+  ]) {
+    const events = [];
+    const f = fixture({ env, mocks: { "src/lib/security/errors.ts": {
+      SecurityError: DiagnosticSecurityError, securityEvent: (event) => events.push(event),
+    } } });
+    const result = await f.load("src/app/actions/admin-auth.ts").loginAdminAction({}, new FormData());
+    assert.equal(result.error, "Administrator access is temporarily unavailable. Please try again later.");
+    assert.deepEqual(events, stage === "auth_document"
+      ? ["admin_auth_bootstrap_hash_invalid", `admin_auth_unavailable_${stage}`]
+      : [`admin_auth_unavailable_${stage}`]);
+  }
+});
+
 test("S01/S02: cookie presence, arbitrary values and plaintext passwords never authenticate", async () => {
   const f = fixture(); const session = f.load(modulePath("session"));
   assert.equal(await session.currentSession(), null);

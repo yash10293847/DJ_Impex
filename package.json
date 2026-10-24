@@ -10,9 +10,10 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:security": "node --test tests/security.test.cjs tests/security-setup.test.mjs",
+    "test:security": "node --test tests/security.test.cjs tests/security-setup.test.mjs tests/mfa.test.cjs",
     "security:scan": "node scripts/security-scan.mjs",
     "security:setup": "node scripts/security-setup.mjs",
+    "security:mfa-key": "node scripts/mfa-key-setup.mjs",
     "test:production": "node scripts/security-http-test.mjs"
   },
   "dependencies": {
@@ -26,20 +27,23 @@
     "motion": "^13.4.0",
     "next": "^16.4.2",
     "next-mdx-remote": "^6.0.0",
-    "nodemailer": "^10.0.10",
+    "nodemailer": "^10.2.1",
+    "otpauth": "^9.5.2",
+    "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "reading-time": "^1.5.0",
     "resend": "^6.28.1",
     "server-only": "^0.0.1",
     "sharp": "^0.35.5",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/mdx": "^2.0.14",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.2",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
@@ -50,6 +54,9 @@
     "typescript": "^5"
   },
   "overrides": {
+    "@vercel/cli-config": {
+      "zod": "$zod"
+    },
     "@next/eslint-plugin-next": {
       "fast-glob": "file:../../../tools/next-eslint-glob"
     }

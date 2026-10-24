@@ -17,6 +17,7 @@ const NAV = [
   { href: "/admin/wear2care", label: "Wear2Care images", Icon: HeartHandshake },
   { href: "/admin/blogs", label: "Blog manager", Icon: Newspaper },
   { href: "/admin/enquiries", label: "Enquiries", Icon: Mail },
+  { href: "/admin/security", label: "Account security", Icon: KeyRound },
 ] as const;
 
 const THEME_KEY = "nabeen-admin-theme";

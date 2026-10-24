@@ -10,15 +10,18 @@ import { ChangePasswordModal } from "@/components/admin/ChangePasswordModal";
 import { WeaveArt } from "@/components/ui/WeaveArt";
 
 export function AdminLoginForm() {
-  const [state, formAction, isPending] = useActionState<AuthState, FormData>(
-    loginAdminAction,
-    {}
-  );
+  const [attempt, setAttempt] = useState(0);
+  return <AdminLoginContent key={attempt} onRestart={() => setAttempt((value) => value + 1)} />;
+}
+
+function AdminLoginContent({ onRestart }: { onRestart: () => void }) {
+  const [state, formAction, isPending] = useActionState<AuthState, FormData>(loginAdminAction, {});
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
 
   return (
-    <div className="relative h-dvh max-h-dvh w-full overflow-hidden bg-mist text-[#0f172a] flex flex-col justify-between">
+    <div className="bg-mist relative flex min-h-dvh w-full flex-col justify-between overflow-x-hidden text-[#0f172a]">
       {/* Animated / Ambient Luxury Fabric Weave Background */}
       <WeaveArt pattern="lace" tone="mist" scale={1.6} intensity={0.16} />
       <div
@@ -28,22 +31,20 @@ export function AdminLoginForm() {
 
       {/* Top Header Branding with Enriched Large DJI Logo */}
       <header className="relative z-10 px-6 py-4 sm:px-8 sm:py-5">
-        <Link href="/" className="inline-flex items-center gap-3.5 group">
-          <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center shrink-0">
+        <Link href="/" className="group inline-flex items-center gap-3.5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center sm:h-14 sm:w-14">
             <Image
               src="/images/logos/dji-logo-transparent.png"
               alt="D J Impex"
               width={64}
               height={64}
               priority
-              className="h-11 sm:h-13 w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-sm"
+              className="h-11 w-auto object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105 sm:h-13"
             />
           </div>
           <div>
-            <span className="block font-sans text-2xl font-bold tracking-tight text-navy">
-              D J Impex
-            </span>
-            <span className="block text-xs font-semibold text-slate tracking-wide">
+            <span className="text-navy block font-sans text-2xl font-bold tracking-tight">D J Impex</span>
+            <span className="text-slate block text-xs font-semibold tracking-wide">
               Nabeen<sup className="text-[0.65em]">®</sup> Admin Portal
             </span>
           </div>
@@ -52,7 +53,7 @@ export function AdminLoginForm() {
 
       {/* Centered Fit-to-Screen Luxury Login Card */}
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 sm:px-6">
-        <div className="w-full max-w-[420px] rounded-3xl border border-white/80 bg-white/95 p-6 sm:p-8 shadow-[0_16px_40px_rgba(13,23,51,0.08)] backdrop-blur-md transition-all">
+        <div className="w-full max-w-[420px] rounded-3xl border border-white/80 bg-white/95 p-6 shadow-[0_16px_40px_rgba(13,23,51,0.08)] backdrop-blur-md transition-all sm:p-8">
           {/* Card Header with Seamless Emblem (Square Border Removed) */}
           <div className="text-center">
             <div className="mx-auto mb-3 flex items-center justify-center">
@@ -65,11 +66,13 @@ export function AdminLoginForm() {
                 className="h-11 w-auto object-contain drop-shadow-sm transition-transform duration-300 hover:scale-105"
               />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-navy">
-              Welcome back
+            <h1 className="text-navy text-2xl font-bold tracking-tight">
+              {state.needsMfa ? "Verify it’s you" : "Welcome back"}
             </h1>
-            <p className="mt-1 text-xs text-slate">
-              Sign in to manage images, fabrics and site content
+            <p className="text-slate mt-1 text-xs">
+              {state.needsMfa
+                ? "Enter a code from your authenticator to finish signing in."
+                : "Sign in to manage images, fabrics and site content"}
             </p>
           </div>
 
@@ -78,88 +81,139 @@ export function AdminLoginForm() {
             {state?.error ? (
               <div
                 role="alert"
-                className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium"
+                className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700"
               >
                 {state.error}
               </div>
             ) : null}
 
-            {/* Email Address */}
-            <div className="space-y-1.5">
-              <label htmlFor="admin-email" className="block text-xs font-semibold uppercase tracking-wide text-slate">
-                Email Address
-              </label>
-              <input
-                id="admin-email"
-                type="email"
-                name="email"
-                required
-                maxLength={254}
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-                placeholder="Enter your admin email"
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-navy placeholder:text-slate-400 focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none transition shadow-xs"
-              />
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <label htmlFor="admin-password" className="block text-xs font-semibold uppercase tracking-wide text-slate">
-                Password
-              </label>
-              <div className="relative">
+            {state.needsMfa ? (
+              <div className="space-y-3">
+                <input type="hidden" name="step" value="mfa" />
+                <label
+                  htmlFor="admin-mfa-code"
+                  className="text-slate block text-xs font-semibold tracking-wide uppercase"
+                >
+                  {useRecoveryCode ? "Recovery code" : "Authenticator code"}
+                </label>
                 <input
-                  id="admin-password"
-                  type={showPassword ? "text" : "password"}
-                  name="password"
+                  key={String(useRecoveryCode)}
+                  id="admin-mfa-code"
+                  name="code"
+                  type="text"
                   required
-                  maxLength={256}
-                  autoComplete="current-password"
-                  placeholder="••••••••••••"
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 pr-10 text-sm text-navy placeholder:text-slate-400 focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none transition shadow-xs"
+                  autoComplete="one-time-code"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  inputMode={useRecoveryCode ? "text" : "numeric"}
+                  maxLength={useRecoveryCode ? 35 : 6}
+                  pattern={useRecoveryCode ? "[a-fA-F0-9-]{32,35}" : "[0-9]{6}"}
+                  placeholder={useRecoveryCode ? "Enter an unused recovery code" : "6-digit code"}
+                  className="text-navy focus:ring-navy/20 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:ring-2"
                 />
+                <p className="text-slate text-xs">
+                  Verification expires after five minutes. Each code can be used once.
+                </p>
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-navy transition cursor-pointer"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setUseRecoveryCode((value) => !value)}
+                  className="text-navy text-xs font-medium underline"
                 >
-                  {showPassword ? (
-                    <EyeOff size={16} aria-hidden="true" />
-                  ) : (
-                    <Eye size={16} aria-hidden="true" />
-                  )}
+                  {useRecoveryCode ? "Use authenticator instead" : "Use a recovery code instead"}
                 </button>
+                <div>
+                  <button type="button" onClick={onRestart} className="text-slate text-xs underline">
+                    Start sign-in again
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Email Address */}
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="admin-email"
+                    className="text-slate block text-xs font-semibold tracking-wide uppercase"
+                  >
+                    Email Address
+                  </label>
+                  <input
+                    id="admin-email"
+                    type="email"
+                    name="email"
+                    required
+                    maxLength={254}
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder="Enter your admin email"
+                    className="text-navy focus:border-navy focus:ring-navy/20 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-xs transition placeholder:text-slate-400 focus:ring-2 focus:outline-none"
+                  />
+                </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between text-xs pt-0.5">
-              <label className="flex items-center gap-2 cursor-pointer select-none text-slate">
-                <input
-                  type="checkbox"
-                  name="remember"
-                  defaultChecked
-                  className="size-4 rounded border-slate-300 text-navy focus:ring-navy/20"
-                />
-                <span>Remember me</span>
-              </label>
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="admin-password"
+                    className="text-slate block text-xs font-semibold tracking-wide uppercase"
+                  >
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="admin-password"
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      required
+                      maxLength={256}
+                      autoComplete="current-password"
+                      placeholder="••••••••••••"
+                      className="text-navy focus:border-navy focus:ring-navy/20 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 pr-10 text-sm shadow-xs transition placeholder:text-slate-400 focus:ring-2 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="hover:text-navy absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-slate-400 transition"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-controls="admin-password"
+                    >
+                      {showPassword ? (
+                        <Eye size={16} aria-hidden="true" />
+                      ) : (
+                        <EyeOff size={16} aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => setShowForgotModal(true)}
-                className="font-medium text-navy hover:underline cursor-pointer"
-              >
-                Forgot password?
-              </button>
-            </div>
+                {/* Remember Me & Forgot Password */}
+                <div className="flex items-center justify-between pt-0.5 text-xs">
+                  <label className="text-slate flex cursor-pointer items-center gap-2 select-none">
+                    <input
+                      type="checkbox"
+                      name="remember"
+                      defaultChecked
+                      className="text-navy focus:ring-navy/20 size-4 rounded border-slate-300"
+                    />
+                    <span>Remember me</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(true)}
+                    className="text-navy cursor-pointer font-medium hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              </>
+            )}
 
             {/* Sign In Button */}
             <button
               type="submit"
               disabled={isPending}
-              className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-navy hover:bg-navy-soft py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+              className="bg-navy hover:bg-navy-soft mt-1 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99] disabled:opacity-60"
             >
               {isPending ? (
                 <>
@@ -167,7 +221,7 @@ export function AdminLoginForm() {
                   <span>Signing in…</span>
                 </>
               ) : (
-                <span>Sign In</span>
+                <span>{state.needsMfa ? "Verify and sign in" : "Sign In"}</span>
               )}
             </button>
           </form>
@@ -186,7 +240,7 @@ export function AdminLoginForm() {
       <footer className="relative z-10 py-3.5 text-center text-xs text-slate-400">
         <p>
           © {new Date().getFullYear()} D J Impex &amp; Co. ·{" "}
-          <Link href="/" className="hover:text-navy transition font-medium">
+          <Link href="/" className="hover:text-navy font-medium transition">
             Back to Website
           </Link>
         </p>

@@ -1,0 +1,7 @@
+.env*
+.security/
+.git/
+.next/
+node_modules/
+scratch_video/
+ezyZip.zip
