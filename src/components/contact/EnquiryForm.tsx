@@ -29,14 +29,20 @@ const USAGE_OPTIONS = [
  * failed and offers WhatsApp, because a lost enquiry is the one failure that costs
  * the client money.
  */
-export function EnquiryForm({
-  variant = "full",
-  paired = false,
-  fabrics = [],
-  whatsappHref,
-  onSuccess,
-  className = "",
-}: {
+export function EnquiryForm(props: EnquiryFormProps) {
+  const [attempt, setAttempt] = useState(0);
+
+  return (
+    <EnquiryFormContent
+      key={attempt}
+      {...props}
+      focusOnMount={attempt > 0}
+      onReset={() => setAttempt((current) => current + 1)}
+    />
+  );
+}
+
+type EnquiryFormProps = {
   variant?: "full" | "short";
   /** Set the text fields two to a row. Full variant only; ignored by the pop-up. */
   paired?: boolean;
@@ -44,6 +50,20 @@ export function EnquiryForm({
   whatsappHref: string;
   onSuccess?: () => void;
   className?: string;
+};
+
+function EnquiryFormContent({
+  variant = "full",
+  paired = false,
+  fabrics = [],
+  whatsappHref,
+  onSuccess,
+  className = "",
+  focusOnMount,
+  onReset,
+}: EnquiryFormProps & {
+  focusOnMount: boolean;
+  onReset: () => void;
 }) {
   const [state, action, pending] = useActionState<EnquiryState, FormData>(submitEnquiry, IDLE);
   const id = useId();
@@ -155,6 +175,7 @@ export function EnquiryForm({
       label="Full name"
       required
       autoComplete="name"
+      autoFocus={focusOnMount}
       error={fieldError("fullName")}
       onChange={() => handleInputChange("fullName")}
     />
@@ -230,6 +251,9 @@ export function EnquiryForm({
             detail; this heading must not contradict it. */}
         <p className="t-h3">Enquiry received</p>
         <p className="text-slate mt-3 max-w-[34rem]">{state.message}</p>
+        <button type="button" onClick={onReset} className="btn btn-primary mt-6">
+          Submit another enquiry
+        </button>
       </div>
     );
   }
