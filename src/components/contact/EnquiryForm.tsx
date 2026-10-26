@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useId, useState } from "react";
+import { startTransition, useActionState, useEffect, useId, useState } from "react";
 
 import { submitEnquiry } from "@/app/actions/enquiry";
 import { WhatsAppGlyph } from "@/components/ui/WhatsAppGlyph";
@@ -80,6 +80,7 @@ export function EnquiryForm({
 
   const handleWhatsAppSubmit = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    if (pending) return;
     const formElement = e.currentTarget.closest("form");
     if (!formElement) return;
 
@@ -141,9 +142,9 @@ export function EnquiryForm({
     submitData.set("message", msg);
     submitData.set("variant", variant);
 
-    submitEnquiry(IDLE, submitData).catch((err) => {
-      console.error("[enquiry] background submit failed:", err);
-    });
+    // Keep the server action attached to React's pending/result state, even
+    // while WhatsApp is open in another tab. Never discard returned errors.
+    startTransition(() => action(submitData));
   };
 
   const fullName = (
@@ -364,10 +365,12 @@ export function EnquiryForm({
           <button
             type="button"
             onClick={handleWhatsAppSubmit}
+            disabled={pending}
+            aria-busy={pending}
             className={`btn border-0 bg-[#25D366] text-white hover:bg-[#20ba5a] active:bg-[#1caa52] justify-center gap-2 font-medium shadow-sm transition-colors duration-150 ${variant === "short" ? "" : "sm:w-fit"}`}
           >
             <WhatsAppGlyph size={18} />
-            <span>Send enquiry via WhatsApp</span>
+            <span>{pending ? "Saving your enquiry…" : "Send enquiry via WhatsApp"}</span>
           </button>
         </div>
 

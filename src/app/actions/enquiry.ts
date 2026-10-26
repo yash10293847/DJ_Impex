@@ -256,7 +256,7 @@ async function submitEnquiryInternal(formData: FormData): Promise<EnquiryState> 
     stored
       ? {
           status: "success",
-          message: "Enquiry received. Our team will contact you on WhatsApp shortly.",
+          message: "Your enquiry is saved, but email confirmation is currently unavailable. Our team can still contact you on WhatsApp.",
         }
       : {
           status: "error",
@@ -265,13 +265,16 @@ async function submitEnquiryInternal(formData: FormData): Promise<EnquiryState> 
 
   if (!stored) return whenMailFails();
   try {
-    if (process.env.CONTACT_EMAIL_ENABLED === "false") return whenMailFails();
+    if (process.env.CONTACT_EMAIL_ENABLED === "false") {
+      securityEvent("smtp_delivery_disabled");
+      return whenMailFails();
+    }
     const { transport, from, to: enquiryTo } = smtpConfiguration();
     const enquiryFrom = { name: "Nabeen Luxury Fabrics", address: from };
     const transporter = nodemailer.createTransport(transport);
 
     // 1. Send all enquiry details to the business
-    await transporter.sendMail({
+    const adminResult = await transporter.sendMail({
       from: enquiryFrom,
       to: enquiryTo,
       replyTo: enquiry.email || undefined,
@@ -284,6 +287,8 @@ async function submitEnquiryInternal(formData: FormData): Promise<EnquiryState> 
       },
     });
 
+    if (adminResult?.rejected?.length) throw Object.assign(new Error("SMTP recipient rejected"), { code: "EENVELOPE" });
+
     // 2. Send auto-reply confirmation to the customer (if email provided)
     let acknowledge = Boolean(enquiry.email);
     if (acknowledge) {
@@ -294,7 +299,7 @@ async function submitEnquiryInternal(formData: FormData): Promise<EnquiryState> 
     if (acknowledge) {
       const customerText = `Dear ${enquiry.fullName},\n\nThank you for reaching out to Nabeen®. We have received your enquiry regarding our luxury fabric collection.\n\nOur team is reviewing your requirements and will reach out to you directly on WhatsApp (${enquiry.countryCode} ${enquiry.whatsappNumber}).\n\nEnquiry Summary:\n- Fabrics of interest: ${enquiry.fabrics.length ? enquiry.fabrics.join(", ") : "General enquiry"}\n${enquiry.usage.length ? `- Usage: ${enquiry.usage.join(", ")}\n` : ""}${enquiry.message ? `- Message: ${enquiry.message}\n` : ""}\nWarm regards,\nThe Nabeen® Team\nD J Impex & Co., Mumbai`;
 
-      await transporter.sendMail({
+      const customerResult = await transporter.sendMail({
         from: enquiryFrom,
         to: enquiry.email,
         replyTo: enquiryTo, // Replies from customer go directly to your business email
@@ -309,9 +314,18 @@ async function submitEnquiryInternal(formData: FormData): Promise<EnquiryState> 
           "X-Mailer": "Nabeen Luxury Fabrics Mailer",
         },
       });
+      if (customerResult?.rejected?.length) throw Object.assign(new Error("SMTP recipient rejected"), { code: "EENVELOPE" });
     }
-  } catch {
+  } catch (error) {
     securityEvent("smtp_send_failed");
+    // Only allow-listed categories enter logs; provider messages may contain
+    // addresses, credentials or enquiry details and must never be printed.
+    const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+    const category = code === "EAUTH" ? "authentication_rejected"
+      : code === "ETIMEDOUT" ? "connection_timeout"
+      : code === "ECONNECTION" || code === "ESOCKET" || code === "EDNS" ? "connection_failed"
+      : code === "EENVELOPE" ? "recipient_rejected" : "configuration_or_send_error";
+    securityEvent(`smtp_${category}`);
     return whenMailFails();
   }
 

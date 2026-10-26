@@ -323,6 +323,40 @@ test("S06/S07: real contact action escapes both email templates, suppresses dupl
   const bot = contactForm(); bot.set("website", "bot"); assert.equal((await action.submitEnquiry({}, bot)).status, "success"); assert.equal(recorded, 1);
 });
 
+test("saved enquiries report unavailable email when SMTP rejects login or recipients", async () => {
+  for (const mode of ["authentication", "recipient", "disabled"]) {
+    let sends = 0;
+    const f = fixture({ env: { EMAIL_USER: "sender@example.org", EMAIL_PASS: "test-only", ...(mode === "disabled" ? { CONTACT_EMAIL_ENABLED: "false" } : {}) }, mocks: {
+      nodemailer: { createTransport: () => ({ sendMail: async () => {
+        sends++;
+        if (mode === "authentication") throw Object.assign(new Error("Private provider details must not be displayed"), { code: "EAUTH" });
+        return { rejected: ["recipient@example.org"] };
+      } }) },
+      "@/lib/admin/inbox": { recordEnquiry: async () => true },
+    } });
+    const result = await f.load("src/app/actions/enquiry.ts").submitEnquiry({}, contactForm());
+    assert.equal(result.status, "success");
+    assert.match(result.message, /saved.*email confirmation is currently unavailable/);
+    assert.equal(result.message.includes("Private provider"), false);
+    assert.equal(sends, mode === "disabled" ? 0 : 1);
+  }
+});
+
+test("customer email failure preserves the saved enquiry and reports confirmation unavailable", async () => {
+  let sends = 0;
+  const f = fixture({ env: { EMAIL_USER: "sender@example.org", EMAIL_PASS: "test-only" }, mocks: {
+    nodemailer: { createTransport: () => ({ sendMail: async () => {
+      if (++sends === 2) throw Object.assign(new Error("timeout"), { code: "ETIMEDOUT" });
+      return { accepted: ["admin@example.org"], rejected: [] };
+    } }) },
+    "@/lib/admin/inbox": { recordEnquiry: async () => true },
+  } });
+  const result = await f.load("src/app/actions/enquiry.ts").submitEnquiry({}, contactForm());
+  assert.equal(sends, 2);
+  assert.equal(result.status, "success");
+  assert.match(result.message, /saved.*email confirmation is currently unavailable/);
+});
+
 test("S10: new inputs are bounded and existing JSON collections still validate", async () => {
   const f = fixture(); const schemas = f.load("src/lib/admin/schemas.ts");
   assert.equal(schemas.slotPatchSchema.safeParse({ title: "x".repeat(161) }).success, false);
