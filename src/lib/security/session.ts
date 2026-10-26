@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -96,6 +97,10 @@ export async function verifySessionToken(
 ): Promise<{ tokenHash: string; expires: number } | null> {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   const auth = await readAuth();
+  return findSession(auth, token);
+}
+
+function findSession(auth: AuthDocument, token: string) {
   const hash = tokenHash(token);
   return (
     auth.sessions.find(
@@ -113,8 +118,18 @@ export async function requireAdmin(): Promise<{ tokenHash: string; expires: numb
   return session;
 }
 
+/** Reuse a fresh auth snapshot only within this Server Component render.
+ * Proxy, API and mutation authorization continue to read independently. */
+export const requireAdminPageAuth = cache(async (): Promise<AuthDocument> => {
+  const token = (await cookies()).get(sessionCookieName())?.value;
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) redirect("/admin/login");
+  const auth = await readAuth();
+  if (!findSession(auth, token)) redirect("/admin/login");
+  return auth;
+});
+
 export async function requireAdminPage(): Promise<void> {
-  if (!(await currentSession())) redirect("/admin/login");
+  await requireAdminPageAuth();
 }
 
 export async function createSession(passwordHash: string, remember: boolean): Promise<void> {

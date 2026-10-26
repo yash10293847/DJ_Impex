@@ -7,6 +7,7 @@ import { useFocusTrap } from "@/lib/useFocusTrap";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { ExternalLink, HeartHandshake, Images, KeyRound, Layers, LayoutPanelTop, LogOut, Mail, Menu, Moon, Newspaper, Sparkles, Sun, X } from "lucide-react";
 import { logoutAdminAction } from "@/app/actions/admin-auth";
+import { AdminNavigationHint } from "@/components/admin/AdminNavigationHint";
 import { ChangePasswordModal } from "@/components/admin/ChangePasswordModal";
 
 const NAV = [
@@ -128,7 +129,8 @@ function AdminPanel({ children, pathname }: { children: React.ReactNode; pathnam
                   }`}
                 >
                   <Icon size={17} aria-hidden="true" />
-                  {label}
+                  <span>{label}</span>
+                  <AdminNavigationHint />
                 </Link>
               );
             })}

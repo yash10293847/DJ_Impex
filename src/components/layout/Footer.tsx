@@ -82,7 +82,7 @@ export function Footer() {
 
       <div className="relative z-10">
         <div className="container-site grid gap-8 pt-10 pb-10 md:grid-cols-2 lg:grid-cols-[1.4fr_0.85fr_1.15fr_1.6fr] lg:gap-8 lg:pt-20 lg:pb-14">
-          <div className="lg:translate-y-[38%]">
+          <div className="pointer-events-none lg:translate-y-[38%]">
             <Image
               src="/images/logos/nabeen-logo-white.png"
               alt="Nabeen, luxury fabrics by DJI"
@@ -240,7 +240,7 @@ export function Footer() {
           ) : null}
         </div>
 
-        <div className="container-site border-t border-white/15 py-8">
+        <div className="container-site relative z-10 border-t border-white/15 py-8">
           <h2 className="visually-hidden">Fabrics</h2>
           <ul className="flex flex-wrap gap-x-5 gap-y-3 lg:gap-x-6">
             {site.fabricTypes.items.map((fabric) => (
