@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Google still lists the previous website's customer login URL.
+      { source: "/ecommerce/auth", destination: "/", permanent: true },
       // /contact was a real page until 2026-09-23, when the enquiry form moved
       // onto the home page. Anyone holding the old link -- a bookmark, a shared
       // URL, the client's own email signature -- lands on the form instead of a
