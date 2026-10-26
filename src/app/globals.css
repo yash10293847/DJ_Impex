@@ -313,7 +313,9 @@ body {
   margin-top: 0px !important;
 }
 
-.goog-text-highlight {
+/* Suppress both legacy and current Google Translate hover highlights. */
+.goog-text-highlight,
+.VIpgJd-yAWNEb-VIpgJd-fmcmS-sn54Q {
   background-color: transparent !important;
   box-shadow: none !important;
 }
