@@ -121,10 +121,10 @@ export function ContactPopup({
               event="whatsapp_click"
               location="popup"
               onClick={() => close("success")}
-              className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2.5 rounded bg-[var(--color-whatsapp)] px-7 py-3 text-sm font-semibold uppercase tracking-[0.06em] text-[var(--color-whatsapp-ink)] transition-opacity duration-[var(--duration-quick)] hover:opacity-90"
+              className="inline-flex max-w-full min-h-11 cursor-pointer items-center justify-center gap-2.5 rounded bg-[var(--color-whatsapp)] px-7 py-3 text-sm font-semibold uppercase tracking-[0.06em] text-[var(--color-whatsapp-ink)] transition-opacity duration-[var(--duration-quick)] hover:opacity-90"
             >
-              <WhatsAppGlyph size={18} />
-              <span>{cta}</span>
+              <WhatsAppGlyph size={18} className="shrink-0" />
+              <span className="min-w-0 [overflow-wrap:anywhere]">{cta}</span>
             </TrackedLink>
           </motion.div>
         </div>

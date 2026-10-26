@@ -318,6 +318,61 @@ body {
   box-shadow: none !important;
 }
 
+/* Content stays in normal flow so long translations grow downwards below
+   the fixed header instead of escaping above a bottom-anchored hero. */
+.site-home-hero {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: max(36rem, 100svh);
+}
+
+.site-home-hero > .site-hero__media {
+  position: absolute;
+  inset: 0;
+}
+
+.site-home-hero .site-hero__content {
+  position: relative;
+  bottom: auto;
+  margin-top: auto;
+  padding-top: 8.5rem;
+  padding-bottom: clamp(5.5rem, 10svh, 6.5rem);
+}
+
+html:not(:lang(en)) .site-hero__content .t-display {
+  max-width: min(100%, 22ch);
+  font-size: clamp(2.25rem, 1.25rem + 4vw, 5.5rem);
+  line-height: 1.15;
+}
+
+html:not(:lang(en)) :where(h1, h2, h3, h4, p, .t-lead, .btn) {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+html:not(:lang(en)) .site-header__nav {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+html:not(:lang(en)) .site-header__nav a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: inherit;
+}
+
+html:not(:lang(en)) .btn {
+  max-width: 100%;
+  white-space: normal;
+  height: auto;
+  text-align: center;
+}
+
+html:not(:lang(en)) .btn svg {
+  flex-shrink: 0;
+}
+
 /* Compact layouts share one scale; the original desktop tokens stay intact. */
 @media (width < 64rem) {
   :root {

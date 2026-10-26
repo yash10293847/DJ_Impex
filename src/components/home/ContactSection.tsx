@@ -43,15 +43,15 @@ export function ContactSection({
         <div className="grid min-w-0 items-start gap-10 lg:grid-cols-[5fr_7fr] lg:gap-20">
           <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
             <div className="bg-navy on-dark min-w-0 rounded-2xl p-6 text-white shadow-lg sm:p-8 lg:p-9">
-              <h2 className="t-h3 text-white">Talk to us directly</h2>
+              <h2 className="t-h3 text-white"><span>Talk to us directly</span></h2>
               <div className="mt-5 sm:mt-6">
                 <ContactChannels onDark={true} />
               </div>
             </div>
 
             <div className="min-w-0">
-              <h3 className="t-h3 text-navy">Head Office</h3>
-              <p className="text-slate mt-0.5 text-sm">Visit us at our location below.</p>
+              <h3 className="t-h3 text-navy"><span>Head Office</span></h3>
+              <p className="text-slate mt-0.5 text-sm"><span>Visit us at our location below.</span></p>
               <a
                 href={MAPS_PLACE_URL}
                 target="_blank"
@@ -76,7 +76,7 @@ export function ContactSection({
           </div>
 
           <div className="min-w-0">
-            <h2 className="t-h3">Send an enquiry</h2>
+            <h2 className="t-h3"><span>Send an enquiry</span></h2>
             <EnquiryForm
               variant="full"
               fabrics={site.fabricTypes.items.map(({ slug, name }) => ({ slug, name }))}

@@ -13,6 +13,7 @@ import { WeaveArt, type WeavePattern } from "@/components/ui/WeaveArt";
 import { WhatsAppGlyph } from "@/components/ui/WhatsAppGlyph";
 import { useWhatsAppPopup } from "@/components/layout/OverlayContext";
 import { track } from "@/lib/analytics";
+import { readLanguage, subscribeLanguage } from "@/lib/translation";
 
 export type HeroMedia =
   | { kind: "image"; src: string; alt: string; position?: string; muted?: boolean }
@@ -83,7 +84,7 @@ export function HeroCarousel({ slides, whatsappHref }: { slides: HeroSlideView[]
       data-hero
       aria-roledescription="carousel"
       aria-label="Nabeen fabrics"
-      className="site-hero on-dark bg-navy-deep relative h-[82svh] min-h-[32rem] w-full max-w-full min-w-0 overflow-hidden text-white sm:h-[100dvh] sm:min-h-[36rem]"
+      className="site-home-hero site-hero on-dark bg-navy-deep relative h-[82svh] min-h-[32rem] w-full max-w-full min-w-0 overflow-hidden text-white sm:h-[100dvh] sm:min-h-[36rem]"
     >
       <div ref={emblaRef} className="site-hero__media h-full w-full max-w-full min-w-0 overflow-hidden">
         <div className="flex h-full w-full min-w-0">
@@ -317,6 +318,7 @@ function HeroWords({
   /** True only for the first headline of the session. */
   rise: boolean;
 }) {
+  const language = useSyncExternalStore(subscribeLanguage, readLanguage, () => "en");
   const words = slide.headline.split(" ");
   // Frozen at mount: this instance keeps the mode it was born with. Embla can fire
   // its first "select" within milliseconds, and letting `rise` change on a live
@@ -327,9 +329,9 @@ function HeroWords({
   return (
     <div key={slideKey}>
       <h1 className="t-display max-w-[15ch]">
-        <span className="visually-hidden">{slide.headline}</span>
-        <span aria-hidden="true" className="block">
-          {words.map((word, index) => (
+        {language === "en" ? <span className="visually-hidden notranslate" translate="no">{slide.headline}</span> : null}
+        <span aria-hidden={language === "en" ? true : undefined} className="block">
+          {language !== "en" ? <span className="hero-translated-headline">{withReg(slide.headline)}</span> : words.map((word, index) => (
             <span key={`${word}-${index}`} className="inline-block overflow-hidden align-bottom">
               <motion.span
                 className="inline-block"
@@ -357,7 +359,7 @@ function HeroWords({
       >
         {slide.sub.includes("|") ? (
           slide.sub.split("|").map((line, i) => (
-            <span key={i} className="block sm:whitespace-nowrap">
+            <span key={i} className="block">
               {withReg(line.trim())}
             </span>
           ))

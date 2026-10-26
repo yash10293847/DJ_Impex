@@ -144,8 +144,8 @@ export function Header({ navigation, contact }: { navigation: NavItem[]; contact
             />
           </Link>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-4 lg:gap-7">
-            <nav aria-label="Main" className="hidden items-center gap-7 xl:flex">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4 lg:gap-7">
+            <nav aria-label="Main" className="site-header__nav hidden min-w-0 flex-wrap items-center justify-end gap-x-5 gap-y-1 xl:flex">
               {navigation.map((item) => {
                 const isJournal = item.href === "/#journal";
                 const isContact = item.href === "/#contact";
