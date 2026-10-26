@@ -56,6 +56,7 @@ export default async function AliNuhuPage() {
         image={heroImage}
         alt={heroAlt}
         objectPosition="center 32%"
+        overlay={false}
       />
 
       <AliNuhuGivesBack heading={gives.heading} paragraphs={gives.paragraphs} photos={photos} />

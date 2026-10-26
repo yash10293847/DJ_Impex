@@ -17,6 +17,7 @@ export function PageHero({
   pattern,
   objectPosition = "center",
   straplineClassName,
+  overlay = true,
 }: {
   title: ReactNode;
   strapline?: ReactNode;
@@ -32,6 +33,7 @@ export function PageHero({
   pattern?: WeavePattern;
   objectPosition?: string;
   straplineClassName?: string;
+  overlay?: boolean;
 }) {
   return (
     <section
@@ -48,7 +50,7 @@ export function PageHero({
           priority
           sizes="100vw"
           quality={88}
-          className="pointer-events-none object-cover brightness-75"
+          className={`pointer-events-none object-cover ${overlay ? "brightness-75" : ""}`}
           style={{ objectPosition }}
           unoptimized={image.startsWith("/api/")}
         />
@@ -59,10 +61,7 @@ export function PageHero({
       )}
 
       {/* Rich dark navy overlay matching footer to ensure identical contrast and tone */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-navy-deep/80"
-      />
+      {overlay ? <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-navy-deep/80" /> : null}
 
       <div className="container-site relative w-full pb-7 pt-24 [text-shadow:0_2px_12px_rgba(0,0,0,0.6)] sm:pb-8 sm:pt-26 md:pb-9 md:pt-28">
         <h1 className="t-h1 max-w-none">{title}</h1>
