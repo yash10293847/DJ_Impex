@@ -20,6 +20,14 @@
    are untouched. */
 @custom-variant dark (&:where(.admin-dark, .admin-dark *));
 
+/* These fields already have an accessible React visibility control. */
+#admin-password::-ms-reveal,
+#modal-old-password::-ms-reveal,
+#modal-new-password::-ms-reveal,
+#modal-confirm-password::-ms-reveal {
+  display: none;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

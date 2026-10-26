@@ -94,7 +94,7 @@ export function ContactPopup({
             <button
               type="button"
               onClick={() => close("dismiss")}
-              className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center text-slate transition-colors hover:text-navy"
+              className="absolute right-3 top-3 flex h-11 w-11 cursor-pointer items-center justify-center text-slate transition-colors hover:text-navy"
             >
               <span className="visually-hidden">Close</span>
               <X aria-hidden="true" size={24} strokeWidth={1.5} />
