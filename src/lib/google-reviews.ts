@@ -69,6 +69,7 @@ function placeIdFrom(value: string | undefined): string {
  * costs nothing on top of the reviews.
  */
 const CACHE_MS = 10 * 60 * 1000;
+const ERROR_CACHE_MS = 15 * 1000;
 
 type PlaceSnapshot = {
   reviews: GoogleReviewTestimonial[] | null;
@@ -80,7 +81,8 @@ const EMPTY: PlaceSnapshot = { reviews: null, rating: null };
 let cached: { at: number; value: PlaceSnapshot } | null = null;
 
 async function getPlace(): Promise<PlaceSnapshot> {
-  if (cached && Date.now() - cached.at < CACHE_MS) return cached.value;
+  const cacheMs = cached?.value.reviews === null ? ERROR_CACHE_MS : CACHE_MS;
+  if (cached && Date.now() - cached.at < cacheMs) return cached.value;
   const fresh = await fetchPlace();
   cached = { at: Date.now(), value: fresh };
   return fresh;
@@ -183,6 +185,7 @@ async function fetchPlace(): Promise<PlaceSnapshot> {
         "X-Goog-FieldMask": FIELD_MASK,
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {
