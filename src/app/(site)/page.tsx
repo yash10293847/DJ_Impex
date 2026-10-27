@@ -12,7 +12,6 @@ import { whatsappLink } from "@/lib/contact";
 import { getGoogleRating, getPositiveGoogleReviews } from "@/lib/google-reviews";
 import { slotMap } from "@/lib/slots";
 import { field, section } from "@/lib/markdown";
-import { visible } from "@/lib/site";
 import { buildMetadata, pageTitle } from "@/lib/seo";
 
 export const metadata: Metadata = buildMetadata({
@@ -84,12 +83,10 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const site = getSite();
   const home = getPage("home");
-  const fallbackTestimonials = visible(site.testimonials.items);
   const googleReviews = await getPositiveGoogleReviews();
   // Same cached Places call as the reviews above, so this costs nothing extra.
   const googleRating = await getGoogleRating();
   const slots = await slotMap();
-  const testimonials = googleReviews && googleReviews.length > 0 ? googleReviews : fallbackTestimonials;
 
   // The client's film opens the hero. Until the source MP4 lands, its own poster
   // frame carries the slide, so the composition is already right.
@@ -126,10 +123,12 @@ export default async function HomePage() {
       <BriefSection />
       <CollectionShowcase />
 
-      <TestimonialsCarousel
-        heading={field(section(home, "5-testimonials"), "heading")}
-        items={testimonials}
-      />
+      {googleReviews.length > 0 ? (
+        <TestimonialsCarousel
+          heading={field(section(home, "5-testimonials"), "heading")}
+          items={googleReviews}
+        />
+      ) : null}
 
       <NabeenGallery />
       <ContactSection>

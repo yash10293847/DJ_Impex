@@ -86,7 +86,7 @@ async function getPlace(): Promise<PlaceSnapshot> {
   return fresh;
 }
 
-const CURATED_REVIEWS: GoogleReviewTestimonial[] = [
+const FALLBACK_REVIEWS: GoogleReviewTestimonial[] = [
   {
     quote: "Nabeen fabrics are absolutely amazing and good quality. Huge shoutout to the DJI team for consistent supply.",
     name: "Ibrahim Al-Mansoor",
@@ -138,31 +138,19 @@ const CURATED_REVIEWS: GoogleReviewTestimonial[] = [
   },
 ];
 
-/** Gets positive reviews (Google + verified trade partner reviews), randomized without repetition. */
+/** Shuffle positive Google reviews; use backup testimonials only on provider errors. */
 export async function getPositiveGoogleReviews(): Promise<GoogleReviewTestimonial[]> {
-  const liveReviews = (await getPlace()).reviews ?? [];
-  const combined = [
-    ...liveReviews,
-    ...CURATED_REVIEWS.map((review) => ({ ...review, source: "trade-partner" as const })),
-  ];
-
-  // Remove any duplicates by quote
-  const uniqueMap = new Map<string, GoogleReviewTestimonial>();
-  for (const item of combined) {
-    const key = item.quote.toLowerCase().slice(0, 30);
-    if (!uniqueMap.has(key)) {
-      uniqueMap.set(key, item);
-    }
+  // Copy the cached array so shuffling never mutates the shared snapshot.
+  const snapshot = await getPlace();
+  // null means the provider failed; [] means Google succeeded with no eligible reviews.
+  const reviews = snapshot.reviews === null
+    ? FALLBACK_REVIEWS.map((review) => ({ ...review, source: "trade-partner" as const }))
+    : [...snapshot.reviews];
+  for (let index = reviews.length - 1; index > 0; index -= 1) {
+    const replacement = Math.floor(Math.random() * (index + 1));
+    [reviews[index], reviews[replacement]] = [reviews[replacement], reviews[index]];
   }
-
-  const pool = Array.from(uniqueMap.values());
-  // Shuffle randomly on each request to prevent repetitive order
-  for (let i = pool.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-
-  return pool.slice(0, 5);
+  return reviews.slice(0, 5);
 }
 
 /**
@@ -222,13 +210,6 @@ async function fetchPlace(): Promise<PlaceSnapshot> {
         authorHref: review.authorAttribution?.uri,
         sourceHref: review.googleMapsUri ?? place.googleMapsUri,
       }));
-
-    // Google provides up to five relevant reviews. Randomizing the eligible
-    // entries gives the slider variety without persisting Google content.
-    for (let index = reviews.length - 1; index > 0; index -= 1) {
-      const replacement = Math.floor(Math.random() * (index + 1));
-      [reviews[index], reviews[replacement]] = [reviews[replacement], reviews[index]];
-    }
 
     const rating: GoogleRating | null =
       typeof place.rating === "number" && place.rating > 0
