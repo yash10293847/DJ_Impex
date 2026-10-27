@@ -30,8 +30,8 @@ import { useOverlay } from "@/components/layout/OverlayContext";
  * services must never keep the whole page behind an overlay.
  */
 const GROUND = "#1e1e1e";
-/** Two seconds from appearing to disappearing: 1.4s hold and 0.6s outro. */
-const MIN_MS = 1400;
+/** 1.25 seconds from appearing to disappearing: 0.65s hold and 0.6s outro. */
+const MIN_MS = 650;
 const OUTRO_S = 0.6;
 const SESSION_KEY = "nabeen_preloader_seen";
 
