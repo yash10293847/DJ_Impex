@@ -24,6 +24,7 @@ type PlaceDetailsResponse = {
 export type GoogleRating = { rating: number; count: number; href: string | null };
 
 export type GoogleReviewTestimonial = Testimonial & {
+  source?: "google" | "trade-partner";
   authorHref?: string;
   sourceHref?: string;
   rating?: number;
@@ -140,7 +141,10 @@ const CURATED_REVIEWS: GoogleReviewTestimonial[] = [
 /** Gets positive reviews (Google + verified trade partner reviews), randomized without repetition. */
 export async function getPositiveGoogleReviews(): Promise<GoogleReviewTestimonial[]> {
   const liveReviews = (await getPlace()).reviews ?? [];
-  const combined = [...liveReviews, ...CURATED_REVIEWS];
+  const combined = [
+    ...liveReviews,
+    ...CURATED_REVIEWS.map((review) => ({ ...review, source: "trade-partner" as const })),
+  ];
 
   // Remove any duplicates by quote
   const uniqueMap = new Map<string, GoogleReviewTestimonial>();
@@ -209,6 +213,7 @@ async function fetchPlace(): Promise<PlaceSnapshot> {
           typeof review.rating === "number" && review.rating >= 4 && Boolean(review.text?.text?.trim()),
       )
       .map((review) => ({
+        source: "google" as const,
         quote: review.text.text.trim(),
         name: review.authorAttribution?.displayName ?? null,
         role: "",

@@ -41,15 +41,32 @@ const GROUND = "#1e1e1e";
 const MIN_MS = 250;
 const OUTRO_S = 0.6;
 const FALLBACK_MS = 3500;
+const SESSION_KEY = "nabeen_preloader_seen";
 
 export function Preloader() {
   const reduceMotion = useReducedMotion();
-  const [show, setShow] = useState(true);
+  // Start hidden so returning documents never flash the film before hydration.
+  const [show, setShow] = useState(false);
 
   useOverlay("preloader", show);
 
   useEffect(() => {
+    try {
+      if (sessionStorage.getItem(SESSION_KEY)) return;
+    } catch {
+      // Storage can be unavailable; the initial visit animation still works.
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        sessionStorage.setItem(SESSION_KEY, "1");
+      } catch {
+        // Keep navigation usable when browser storage is blocked.
+      }
+      setShow(true);
+    });
     const mountedAt = Date.now();
+    let leaveTimeout: number | undefined;
 
     // A refresh otherwise lands you back where you were reading, which the
     // preloader hides until it lifts -- so the page appears to have ignored the
@@ -76,7 +93,7 @@ export function Preloader() {
       // Again on load: a browser can restore its position after hydration.
       restoreInitialPosition();
       const remaining = Math.max(0, MIN_MS - (Date.now() - mountedAt));
-      window.setTimeout(() => setShow(false), remaining);
+      leaveTimeout = window.setTimeout(() => setShow(false), remaining);
     };
 
     if (document.readyState === "complete") leave();
@@ -85,6 +102,8 @@ export function Preloader() {
     const fallback = window.setTimeout(() => setShow(false), FALLBACK_MS);
 
     return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(leaveTimeout);
       window.removeEventListener("load", leave);
       window.clearTimeout(fallback);
       try {

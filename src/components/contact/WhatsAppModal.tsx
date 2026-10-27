@@ -10,7 +10,7 @@ import { submitEnquiry } from "@/app/actions/enquiry";
 import { useWhatsAppPopup } from "@/components/layout/OverlayContext";
 import { WhatsAppGlyph } from "@/components/ui/WhatsAppGlyph";
 import { track } from "@/lib/analytics";
-import { COUNTRY_CODES, IDLE } from "@/lib/enquiry";
+import { COUNTRY_CODES, enquirySchema, IDLE } from "@/lib/enquiry";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 
 const DEFAULT_FABRICS = [
@@ -31,6 +31,15 @@ const USAGE_OPTIONS = [
   "Fashion House / Tailor",
 ];
 
+const popupDetailsSchema = enquirySchema.pick({ fullName: true, whatsappNumber: true }).extend({
+  whatsappNumber: enquirySchema.shape.whatsappNumber.refine(
+    (phone) => phone.replace(/\D/g, "").length >= 5,
+    "Please enter at least 5 digits for your WhatsApp number.",
+  ),
+});
+
+type FieldErrors = { fullName?: string; whatsappNumber?: string };
+
 export function WhatsAppModal({
   fabrics = DEFAULT_FABRICS,
 }: {
@@ -39,6 +48,8 @@ export function WhatsAppModal({
   const pathname = usePathname();
   const { isOpen, close: closeModal } = useWhatsAppPopup();
   const panelRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const numberRef = useRef<HTMLInputElement>(null);
   const reduceMotion = useReducedMotion();
 
   const [fullName, setFullName] = useState("");
@@ -46,7 +57,7 @@ export function WhatsAppModal({
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [selectedFabrics, setSelectedFabrics] = useState<string[]>([]);
   const [selectedUsage, setSelectedUsage] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   const close = useCallback(
     (reason: "dismiss" | "success") => {
@@ -72,16 +83,24 @@ export function WhatsAppModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim()) {
-      setError("Please enter your full name.");
-      return;
-    }
-    if (!whatsappNumber.trim()) {
-      setError("Please enter your WhatsApp number.");
+    const result = popupDetailsSchema.safeParse({ fullName, whatsappNumber });
+    if (!result.success) {
+      const nextErrors: FieldErrors = {};
+      for (const issue of result.error.issues) {
+        const field = issue.path[0];
+        if (field === "fullName" || field === "whatsappNumber") {
+          nextErrors[field] ??= issue.message;
+        }
+      }
+      if (fullName.trim().length < 2) {
+        nextErrors.fullName = "Please enter a name with at least 2 characters.";
+      }
+      setErrors(nextErrors);
+      (nextErrors.fullName ? nameRef : numberRef).current?.focus();
       return;
     }
 
-    setError(null);
+    setErrors({});
 
     const countryObj = COUNTRY_CODES.find((c) => c.value === countryCode);
     const countryName = countryObj
@@ -162,26 +181,35 @@ export function WhatsAppModal({
               </h2>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-4 grid min-w-0 grid-cols-1 gap-3.5 [&>div]:min-w-0">
-              {error ? (
-                <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-600">
-                  {error}
-                </div>
-              ) : null}
-
+            <form noValidate onSubmit={handleSubmit} className="mt-4 grid min-w-0 grid-cols-1 gap-3.5 [&>div]:min-w-0">
               <div>
                 <label htmlFor="modal-name" className="block text-xs font-semibold text-navy">
                   Full Name <span className="text-accent">*</span>
                 </label>
                 <input
+                  ref={nameRef}
                   id="modal-name"
+                  name="fullName"
                   type="text"
                   required
+                  minLength={2}
+                  maxLength={100}
+                  autoComplete="name"
+                  aria-invalid={errors.fullName ? true : undefined}
+                  aria-describedby={errors.fullName ? "modal-name-error" : undefined}
                   placeholder="e.g. Rahul Sharma"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    setErrors((current) => ({ ...current, fullName: undefined }));
+                  }}
                   className="mt-1.5 w-full rounded-lg border border-line px-3.5 py-2.5 text-sm outline-none transition focus:border-navy focus:ring-1 focus:ring-navy"
                 />
+                {errors.fullName ? (
+                  <p id="modal-name-error" role="alert" className="mt-1.5 text-xs text-red-600">
+                    {errors.fullName}
+                  </p>
+                ) : null}
               </div>
 
               <div>
@@ -202,15 +230,31 @@ export function WhatsAppModal({
                     ))}
                   </select>
                   <input
+                    ref={numberRef}
                     id="modal-number"
+                    name="whatsappNumber"
                     type="tel"
                     required
+                    minLength={5}
+                    maxLength={20}
+                    inputMode="tel"
+                    autoComplete="tel-national"
+                    aria-invalid={errors.whatsappNumber ? true : undefined}
+                    aria-describedby={errors.whatsappNumber ? "modal-number-error" : undefined}
                     placeholder="Mobile number"
                     value={whatsappNumber}
-                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    onChange={(e) => {
+                      setWhatsappNumber(e.target.value);
+                      setErrors((current) => ({ ...current, whatsappNumber: undefined }));
+                    }}
                     className="min-w-0 flex-1 rounded-lg border border-line px-3.5 py-2.5 text-sm outline-none transition focus:border-navy focus:ring-1 focus:ring-navy"
                   />
                 </div>
+                {errors.whatsappNumber ? (
+                  <p id="modal-number-error" role="alert" className="mt-1.5 text-xs text-red-600">
+                    {errors.whatsappNumber}
+                  </p>
+                ) : null}
               </div>
 
               <div>

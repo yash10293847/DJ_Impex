@@ -1,0 +1,132 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "location": null,
+    "title": "House Of Luxury Men&#x27;s Fabrics | Nabeen® Luxury Fabrics by DJI",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/about",
+    "status": 200,
+    "location": null,
+    "title": "About D J Impex &amp; Co. &amp; Our Vision | Nabeen® Luxury Fabrics by DJI",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/nabeen",
+    "status": 200,
+    "location": null,
+    "title": "Nabeen® | Nabeen® Luxury Fabrics by DJI",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/nabeen-x-ali-nuhu",
+    "status": 200,
+    "location": null,
+    "title": "Nabeen x Ali Nuhu | Nabeen® Luxury Fabrics by DJI",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/journal",
+    "status": 200,
+    "location": null,
+    "title": "The Fabric Journal | Nabeen® Luxury Fabrics by DJI",
+    "brokenAnchors": [],
+    "articles": [
+      "/journal/best-mens-lace-fabrics-in-nigeria-2026",
+      "/journal/swiss-lace-complete-guide-for-african-fashion",
+      "/journal/how-to-identify-high-quality-lace-fabric"
+    ]
+  },
+  {
+    "path": "/contact",
+    "status": 307,
+    "location": "/#contact",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/vision",
+    "status": 307,
+    "location": "/about",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/ecommerce/auth",
+    "status": 308,
+    "location": "/",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/qa-missing-page",
+    "status": 404,
+    "location": null,
+    "title": "404 - The thread seems to have been lost | DJ Impex | Nabeen® Luxury Fabrics by DJI",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/journal/qa-missing-article",
+    "status": 404,
+    "location": null,
+    "title": "404 - The thread seems to have been lost | DJ Impex | Nabeen® Luxury Fabrics by DJI",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/_todo",
+    "status": 404,
+    "location": null,
+    "title": "404 - The thread seems to have been lost | DJ Impex | Nabeen® Luxury Fabrics by DJI",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/admin/login",
+    "status": 200,
+    "location": null,
+    "title": "Sign In · D J Impex Admin",
+    "brokenAnchors": [],
+    "articles": []
+  },
+  {
+    "path": "/journal/best-mens-lace-fabrics-in-nigeria-2026",
+    "status": 200,
+    "location": null,
+    "title": "Best Men&#x27;s Lace Fabrics in Nigeria (2026 Guide) | Nabeen",
+    "brokenAnchors": [],
+    "articles": [
+      "/journal/swiss-lace-complete-guide-for-african-fashion",
+      "/journal/how-to-identify-high-quality-lace-fabric"
+    ]
+  },
+  {
+    "path": "/journal/swiss-lace-complete-guide-for-african-fashion",
+    "status": 200,
+    "location": null,
+    "title": "Swiss Lace Fabric: A Complete Guide for African Fashion | Nabeen",
+    "brokenAnchors": [],
+    "articles": [
+      "/journal/best-mens-lace-fabrics-in-nigeria-2026",
+      "/journal/how-to-identify-high-quality-lace-fabric"
+    ]
+  },
+  {
+    "path": "/journal/how-to-identify-high-quality-lace-fabric",
+    "status": 200,
+    "location": null,
+    "title": "How to Identify High-Quality Lace Fabric | The Fabric Journal by Nabeen",
+    "brokenAnchors": [],
+    "articles": [
+      "/journal/best-mens-lace-fabrics-in-nigeria-2026",
+      "/journal/swiss-lace-complete-guide-for-african-fashion"
+    ]
+  }
+]

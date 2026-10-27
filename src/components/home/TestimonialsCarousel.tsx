@@ -9,6 +9,7 @@ import { TbcTag } from "@/components/ui/TbcTag";
 import type { Testimonial } from "@/lib/site";
 
 type ReviewItem = Testimonial & {
+  source?: "google" | "trade-partner";
   authorHref?: string;
   sourceHref?: string;
   rating?: number;
@@ -79,11 +80,9 @@ function ReviewerAvatar({ name, index }: { name?: string | null; index?: number 
 export function TestimonialsCarousel({
   heading,
   items,
-  isGoogleReviews = false,
 }: {
   heading: string;
   items: ReviewItem[];
-  isGoogleReviews?: boolean;
 }) {
   const [emblaRef, embla] = useEmblaCarousel({ loop: true, align: "start" });
   const [selected, setSelected] = useState(0);
@@ -195,7 +194,25 @@ export function TestimonialsCarousel({
                       className="h-9 w-9 fill-white text-white sm:h-11 sm:w-11"
                       aria-hidden="true"
                     />
-                    {isGoogleReviews ? <GoogleReviewsBrand /> : null}
+                    {item.source === "google" ? (
+                      item.sourceHref ? (
+                        <a
+                          href={item.sourceHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Read this review on Google Maps"
+                          className="underline-offset-4 hover:underline"
+                        >
+                          <GoogleReviewsBrand />
+                        </a>
+                      ) : (
+                        <GoogleReviewsBrand />
+                      )
+                    ) : (
+                      <span className="text-lg font-medium text-white sm:text-xl md:text-2xl">
+                        Trade Partner Testimonial
+                      </span>
+                    )}
                   </div>
 
                   <div
@@ -247,7 +264,7 @@ export function TestimonialsCarousel({
                       ) : (
                         <p className="font-medium text-white">{item.role}</p>
                       )}
-                      {!isGoogleReviews && (item.role || item.status === "tbc") ? (
+                      {item.source !== "google" && (item.role || item.status === "tbc") ? (
                         <div className="t-small mt-0.5 flex flex-wrap items-center gap-x-2 text-white/65">
                           {item.name && item.role ? <span>{item.role}</span> : null}
                           <TbcTag status={item.status} note="Name and city not yet supplied by the client" />

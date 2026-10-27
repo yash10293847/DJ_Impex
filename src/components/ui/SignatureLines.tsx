@@ -2,11 +2,13 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
-import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { X, ZoomIn } from "lucide-react";
 
 import { withReg } from "@/components/ui/Reg";
+import { useOverlay } from "@/components/layout/OverlayContext";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 const subscribeMounted = () => () => {};
 
@@ -100,21 +102,9 @@ export function SignatureLines({
   const id = useId();
   const reduceMotion = useReducedMotion();
 
-  useEffect(() => {
-    if (!zoomedProduct) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setZoomedProduct(null);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [zoomedProduct]);
+  const zoomRef = useRef<HTMLDivElement>(null);
+  useOverlay(`swatch-zoom-${id}`, zoomedProduct !== null);
+  useFocusTrap(zoomRef, zoomedProduct !== null, () => setZoomedProduct(null), "button");
 
   const collections = SIGNATURE_COLLECTIONS.map((col) => ({
     ...col,
@@ -314,6 +304,8 @@ export function SignatureLines({
             {zoomedProduct && (
               <motion.div
                 key="zoom-modal"
+                ref={zoomRef}
+                tabIndex={-1}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}

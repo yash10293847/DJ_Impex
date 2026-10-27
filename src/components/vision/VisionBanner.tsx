@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { HeroBackgroundVideo } from "@/components/ui/HeroBackgroundVideo";
 
 import { withReg } from "@/components/ui/Reg";
 
@@ -21,15 +21,6 @@ export function VisionBanner({
   preserveFrame?: boolean;
 }) {
   const isVideo = !videoSrc.match(/\.(jpg|jpeg|png|webp|avif)$/i);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (!isVideo) return;
-    const video = videoRef.current;
-    if (!video) return;
-    void video.play().catch(() => undefined);
-    return () => video.pause();
-  }, [isVideo, videoSrc]);
 
   return (
     <section
@@ -40,20 +31,13 @@ export function VisionBanner({
       {/* Video / Background Layer extending to top edge */}
       <div className="about-banner__media absolute inset-0 h-full w-full overflow-hidden">
         {isVideo ? (
-          <video
+          <HeroBackgroundVideo
             key={videoSrc}
-            ref={videoRef}
-            aria-hidden="true"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
+            src={videoSrc}
+            label="About video"
             poster={poster}
             className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
-          >
-            <source src={videoSrc} type="video/mp4" />
-          </video>
+          />
         ) : (
           <Image
             src={videoSrc}

@@ -5,10 +5,10 @@ import Fade from "embla-carousel-fade";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { withReg } from "@/components/ui/Reg";
-import { TrackedLink } from "@/components/ui/TrackedLink";
+import { HeroBackgroundVideo } from "@/components/ui/HeroBackgroundVideo";
 import { WeaveArt, type WeavePattern } from "@/components/ui/WeaveArt";
 import { WhatsAppGlyph } from "@/components/ui/WhatsAppGlyph";
 import { useWhatsAppPopup } from "@/components/layout/OverlayContext";
@@ -113,7 +113,6 @@ export function HeroCarousel({ slides, whatsappHref }: { slides: HeroSlideView[]
                 <HeroVideo
                   src={slide.media.src}
                   poster={slide.media.poster}
-                  alt={slide.media.alt}
                   active={index === selected}
                   playing={playing}
                 />
@@ -139,17 +138,17 @@ export function HeroCarousel({ slides, whatsappHref }: { slides: HeroSlideView[]
           brand, and it sits behind the media rather than over it. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[linear-gradient(100deg,rgb(0_0_0/0.77)_0%,rgb(0_0_0/0.47)_34%,rgb(0_0_0/0.15)_64%,rgb(0_0_0/0.04)_100%)]"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgb(0_0_0/0.77)_0%,rgb(0_0_0/0.47)_34%,rgb(0_0_0/0.15)_64%,rgb(0_0_0/0.04)_100%)]"
       />
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-[58%] bg-[linear-gradient(to_top,rgb(0_0_0/0.58)_0%,rgb(0_0_0/0.21)_44%,transparent_100%)]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-[linear-gradient(to_top,rgb(0_0_0/0.58)_0%,rgb(0_0_0/0.21)_44%,transparent_100%)]"
       />
       {/* Weighted into the bottom-left corner, where the words actually sit, so the
           cloth at the top right stays bright. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(130%_118%_at_0%_100%,rgb(0_0_0/0.86)_0%,rgb(0_0_0/0.6)_34%,rgb(0_0_0/0.28)_56%,transparent_78%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(130%_118%_at_0%_100%,rgb(0_0_0/0.86)_0%,rgb(0_0_0/0.6)_34%,rgb(0_0_0/0.28)_56%,transparent_78%)]"
       />
 
       <div className="site-hero__content container-site absolute inset-x-0 bottom-[clamp(3.5rem,10vh,6.5rem)]">
@@ -219,48 +218,26 @@ export function HeroCarousel({ slides, whatsappHref }: { slides: HeroSlideView[]
 function HeroVideo({
   src,
   poster,
-  alt,
   active,
   playing,
 }: {
   src: string;
   poster: string;
-  alt: string;
   active: boolean;
   playing: boolean;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const reduceMotion = useReducedMotion();
   const autoplayAllowed = useCanAutoplay();
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (active && playing && !reduceMotion && autoplayAllowed) {
-      void video.play().catch(() => undefined);
-    } else {
-      video.pause();
-    }
-  }, [active, playing, reduceMotion, autoplayAllowed]);
-
   return (
     <div className="absolute inset-0">
-      <video
-        ref={videoRef}
+      <HeroBackgroundVideo
+        src={src}
+        poster={poster}
+        label="Home video"
+        active={active && playing}
+        autoplayAllowed={autoplayAllowed}
         className="h-full w-full object-cover contrast-[1.04] saturate-[1.06] brightness-[1.02] [image-rendering:-webkit-optimize-contrast]"
         style={{ objectPosition: "50% 35%" }}
-        poster={poster}
-        // Metadata when the film may start by itself; nothing at all when it may
-        // not, so a Data Saver visitor downloads only the poster until they ask
-        // for the film. Either way the element is here and the control works.
-        preload={autoplayAllowed ? "auto" : "none"}
-        muted
-        loop
-        playsInline
-        aria-label={alt}
-      >
-        <source src={src} type="video/mp4" />
-      </video>
+      />
     </div>
   );
 }

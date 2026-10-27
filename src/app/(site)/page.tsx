@@ -89,7 +89,6 @@ export default async function HomePage() {
   // Same cached Places call as the reviews above, so this costs nothing extra.
   const googleRating = await getGoogleRating();
   const slots = await slotMap();
-  const hasGoogleReviews = (googleReviews?.length ?? 0) > 0;
   const testimonials = googleReviews && googleReviews.length > 0 ? googleReviews : fallbackTestimonials;
 
   // The client's film opens the hero. Until the source MP4 lands, its own poster
@@ -130,7 +129,6 @@ export default async function HomePage() {
       <TestimonialsCarousel
         heading={field(section(home, "5-testimonials"), "heading")}
         items={testimonials}
-        isGoogleReviews={hasGoogleReviews}
       />
 
       <NabeenGallery />
