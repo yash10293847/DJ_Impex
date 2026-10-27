@@ -34,7 +34,7 @@ export function ContactSection({
           alt=""
           fill
           sizes="100vw"
-          quality={90}
+          quality={88}
           className="object-cover object-top opacity-70"
         />
         <div aria-hidden="true" className="absolute inset-0 bg-white/70 backdrop-blur-[0.5px]" />

@@ -55,7 +55,7 @@ export function NabeenIntro({
           alt=""
           fill
           sizes="100vw"
-          quality={90}
+          quality={88}
           className="object-cover object-top opacity-70"
         />
         <div

@@ -357,7 +357,7 @@ export function SignatureLines({
                       alt={zoomedProduct.product.name}
                       fill
                       sizes="(max-width: 640px) 90vw, (max-width: 1024px) 520px, 576px"
-                      quality={95}
+                      quality={88}
                       priority
                       className="object-cover"
                     />

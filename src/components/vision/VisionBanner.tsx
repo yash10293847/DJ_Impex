@@ -45,7 +45,7 @@ export function VisionBanner({
             fill
             priority
             sizes="100vw"
-            quality={90}
+            quality={88}
             className="object-cover object-center"
           />
         )}
