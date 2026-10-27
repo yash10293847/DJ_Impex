@@ -26,21 +26,13 @@ import { useOverlay } from "@/components/layout/OverlayContext";
  * throughout, because its rotation is its own CSS animation and owes nothing to
  * the transform the outro is using.
  *
- * It leaves on `window.onload` with a 3.5s timeout behind it. MIN_MS is not in
- * any brief; without it Next has usually fired `load` before React hydrates and
- * the whole thing is over in about 200ms.
+ * The intro has a fixed budget after hydration. Images, maps, and third-party
+ * services must never keep the whole page behind an overlay.
  */
 const GROUND = "#1e1e1e";
-/**
- * Hold, then outro: 850ms between them. The brief is 1.1s for the whole thing,
- * measured from navigation, and React is not mounted for roughly the first 250
- * of those -- so the budget this component actually controls is what is left.
- * It cannot leave before it exists, so on a slow device the total will run over
- * no matter what these say.
- */
-const MIN_MS = 250;
+/** Two seconds from appearing to disappearing: 1.4s hold and 0.6s outro. */
+const MIN_MS = 1400;
 const OUTRO_S = 0.6;
-const FALLBACK_MS = 3500;
 const SESSION_KEY = "nabeen_preloader_seen";
 
 export function Preloader() {
@@ -51,12 +43,22 @@ export function Preloader() {
   useOverlay("preloader", show);
 
   useEffect(() => {
+    const connection = (
+      navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }
+    ).connection;
+    if (
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      connection?.saveData ||
+      ["slow-2g", "2g"].includes(connection?.effectiveType ?? "")
+    )
+      return;
     try {
       if (sessionStorage.getItem(SESSION_KEY)) return;
     } catch {
       // Storage can be unavailable; the initial visit animation still works.
     }
 
+    let leaveTimeout: number | undefined;
     const frame = window.requestAnimationFrame(() => {
       try {
         sessionStorage.setItem(SESSION_KEY, "1");
@@ -64,9 +66,15 @@ export function Preloader() {
         // Keep navigation usable when browser storage is blocked.
       }
       setShow(true);
+      leaveTimeout = window.setTimeout(() => {
+        setShow(false);
+        try {
+          history.scrollRestoration = previousRestoration;
+        } catch {
+          /* Unsupported browser. */
+        }
+      }, MIN_MS);
     });
-    const mountedAt = Date.now();
-    let leaveTimeout: number | undefined;
 
     // A refresh otherwise lands you back where you were reading, which the
     // preloader hides until it lifts -- so the page appears to have ignored the
@@ -83,29 +91,21 @@ export function Preloader() {
       /* Not supported: the refresh simply keeps its old position. */
     }
     const restoreInitialPosition = () => {
-      const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+      let hash = window.location.hash.slice(1);
+      try {
+        hash = decodeURIComponent(hash);
+      } catch {
+        /* A malformed fragment is treated literally. */
+      }
+      const target = document.getElementById(hash);
       if (target) target.scrollIntoView({ behavior: "instant" });
       else window.scrollTo(0, 0);
     };
     restoreInitialPosition();
 
-    const leave = () => {
-      // Again on load: a browser can restore its position after hydration.
-      restoreInitialPosition();
-      const remaining = Math.max(0, MIN_MS - (Date.now() - mountedAt));
-      leaveTimeout = window.setTimeout(() => setShow(false), remaining);
-    };
-
-    if (document.readyState === "complete") leave();
-    else window.addEventListener("load", leave, { once: true });
-
-    const fallback = window.setTimeout(() => setShow(false), FALLBACK_MS);
-
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(leaveTimeout);
-      window.removeEventListener("load", leave);
-      window.clearTimeout(fallback);
       try {
         history.scrollRestoration = previousRestoration;
       } catch {
@@ -119,7 +119,7 @@ export function Preloader() {
       {show ? (
         <motion.div
           aria-hidden="true"
-          className="fixed left-0 top-0 z-[9999] h-screen w-screen overflow-hidden text-white"
+          className="fixed top-0 left-0 z-[9999] h-screen w-screen overflow-hidden text-white"
           style={{ backgroundColor: GROUND }}
           initial={{ opacity: 1 }}
           exit={{

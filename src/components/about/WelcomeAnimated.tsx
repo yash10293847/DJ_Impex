@@ -14,7 +14,6 @@ export function WelcomeAnimated({
   lead,
   craft,
   invitation,
-  closing,
 }: WelcomeAnimatedProps) {
   const reduceMotion = useReducedMotion();
   const ease = [0.22, 1, 0.36, 1] as const;

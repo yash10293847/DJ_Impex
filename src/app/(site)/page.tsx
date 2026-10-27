@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { BriefSection } from "@/components/home/BriefSection";
 import { ContactSection } from "@/components/home/ContactSection";
@@ -8,7 +9,6 @@ import { NabeenGallery } from "@/components/home/NabeenGallery";
 import { SocialProofBanner } from "@/components/home/SocialProofBanner";
 import { TestimonialsCarousel } from "@/components/home/TestimonialsCarousel";
 import { getBrandFilm, getHeroSlides, getPage, getSite } from "@/lib/content";
-import { whatsappLink } from "@/lib/contact";
 import { getGoogleRating, getPositiveGoogleReviews } from "@/lib/google-reviews";
 import { slotMap } from "@/lib/slots";
 import { field, section } from "@/lib/markdown";
@@ -83,9 +83,6 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const site = getSite();
   const home = getPage("home");
-  const googleReviews = await getPositiveGoogleReviews();
-  // Same cached Places call as the reviews above, so this costs nothing extra.
-  const googleRating = await getGoogleRating();
   const slots = await slotMap();
 
   // The client's film opens the hero. Until the source MP4 lands, its own poster
@@ -118,22 +115,45 @@ export default async function HomePage() {
 
   return (
     <>
-      <HeroCarousel slides={slides} whatsappHref={whatsappLink()} />
+      <HeroCarousel slides={slides} />
 
       <BriefSection />
       <CollectionShowcase />
 
-      {googleReviews.length > 0 ? (
-        <TestimonialsCarousel
-          heading={field(section(home, "5-testimonials"), "heading")}
-          items={googleReviews}
-        />
-      ) : null}
+      <Suspense fallback={<TestimonialsPlaceholder />}>
+        <HomeTestimonials heading={field(section(home, "5-testimonials"), "heading")} />
+      </Suspense>
 
       <NabeenGallery />
       <ContactSection>
-        <SocialProofBanner designs={site.brand.designsCount.value} google={googleRating} />
+        <Suspense fallback={<div aria-hidden="true" className="min-h-40" />}>
+          <HomeSocialProof designs={site.brand.designsCount.value} />
+        </Suspense>
       </ContactSection>
     </>
+  );
+}
+
+async function HomeTestimonials({ heading }: { heading: string }) {
+  const items = await getPositiveGoogleReviews();
+  return items.length ? <TestimonialsCarousel heading={heading} items={items} /> : null;
+}
+
+async function HomeSocialProof({ designs }: { designs: string }) {
+  return <SocialProofBanner designs={designs} google={await getGoogleRating()} />;
+}
+
+function TestimonialsPlaceholder() {
+  return (
+    <section
+      aria-busy="true"
+      aria-label="Loading customer reviews"
+      className="bg-navy min-h-[32rem] px-[var(--spacing-gutter)] py-24 text-white"
+    >
+      <div className="container-site space-y-6" aria-hidden="true">
+        <div className="h-10 w-3/4 max-w-lg rounded bg-white/10" />
+        <div className="h-24 rounded bg-white/10" />
+      </div>
+    </section>
   );
 }

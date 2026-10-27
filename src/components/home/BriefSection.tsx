@@ -1,13 +1,12 @@
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
-import { getPage, getSite } from "@/lib/content";
+import { getPage } from "@/lib/content";
 import { field, section } from "@/lib/markdown";
 import { BriefAnimated } from "@/components/home/BriefAnimated";
 import { slotMap } from "@/lib/slots";
 import { StatBoxes } from "@/components/home/StatBoxes";
 
 export async function BriefSection() {
-  const site = getSite();
   const slot = (await slotMap())["home-brief"];
   const brief = section(getPage("home"), "3-short-brief");
   const heading = field(brief, "heading") || "MORE THAN A FABRIC | A SIGNATURE OF DISTINCTION.";

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { useMediaQuery } from "@/lib/useMediaQuery";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 export interface FabricItem {
@@ -139,7 +138,6 @@ export function FabricHoverShowcase({
   });
   const [activeItem, setActiveItem] = useState<FabricItem>(items[0] || FABRIC_COLLECTION[0]);
   const reduceMotion = useReducedMotion();
-  const compact = useMediaQuery("(max-width: 1023px)");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const activeIndex = Math.max(
     0,

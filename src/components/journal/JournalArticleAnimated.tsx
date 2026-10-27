@@ -189,17 +189,3 @@ export function JournalArticleAnimated({ post }: { post: Post }) {
     </article>
   );
 }
-
-function PublishedDate({ post }: { post: Post }) {
-  if (post.dateStatus === "hold") return null;
-  const date = new Date(post.publishedAt);
-  const label = date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-
-  return (
-    <>
-      <span aria-hidden="true">·</span>
-      <time dateTime={post.publishedAt}>{label}</time>
-      <TbcTag status={post.dateStatus ?? "confirmed"} note="Publication date not yet confirmed" />
-    </>
-  );
-}

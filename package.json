@@ -8,6 +8,7 @@
     "start": "next start -p 3001",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test:public": "node --test tests/public-runtime.test.cjs tests/translation.test.cjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:security": "node --test tests/security.test.cjs tests/security-setup.test.mjs tests/mfa.test.cjs",

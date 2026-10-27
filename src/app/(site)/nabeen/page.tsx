@@ -7,7 +7,6 @@ import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
 import { withReg } from "@/components/ui/Reg";
 import { SignatureLines } from "@/components/ui/SignatureLines";
-import { TbcTag } from "@/components/ui/TbcTag";
 import { getBrandFilm, getPage, getSite } from "@/lib/content";
 import { slotMap } from "@/lib/slots";
 import { field, section } from "@/lib/markdown";

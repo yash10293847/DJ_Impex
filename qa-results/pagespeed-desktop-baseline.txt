@@ -1,0 +1,159 @@
+PageSpeed Insights
+Copy Link
+Docs
+This site uses cookies from Google to deliver its services and to analyze traffic.
+Learn More.
+Ok, Got it.
+Report from Oct 27, 2026, 3:42:09 PM
+
+Enter a valid URL
+
+Analyze
+smartphone
+Mobile
+computer
+Desktop
+Discover what your real users are experiencing
+No Data
+Diagnose performance issues
+98
+Performance
+89
+Accessibility
+96
+Best Practices
+100
+SEO
+1/2
+Agentic Browsing
+98
+FCP
++10
+LCP
++25
+TBT
++30
+CLS
++25
+SI
++8
+Performance
+Values are estimated and may vary. The performance score is calculated directly from these metrics.See calculator.
+0–49
+50–89
+90–100
+METRICS
+Expand view
+First Contentful Paint
+0.3 s
+Largest Contentful Paint
+0.8 s
+Total Blocking Time
+70 ms
+Cumulative Layout Shift
+0.016
+Speed Index
+1.5 s
+Captured at Oct 27, 2026, 3:42 PM GMT+5:30
+Emulated Desktop with Lighthouse 13.5.0
+Single page session
+Initial page load
+Custom throttling
+Using HeadlessChromium 153.0.8010.36 with lr
+View Treemap
+Show audits relevant to:
+All
+FCP
+LCP
+TBT
+CLS
+INSIGHTS
+Render-blocking requests Est savings of 70 ms
+Improve image delivery Est savings of 33 KiB
+Legacy JavaScript Est savings of 14 KiB
+Forced reflow
+LCP breakdown
+Layout shift culprits
+Optimize DOM size
+These insights are also available in the Chrome DevTools Performance Panel - record a trace to view more detailed information.
+DIAGNOSTICS
+Reduce unused JavaScript Est savings of 72 KiB
+Avoid enormous network payloads Total size was 12,011 KiB
+Avoid long main-thread tasks 3 long tasks found
+Avoid non-composited animations 6 animated elements found
+More information about the performance of your application. These numbers don't directly affect the Performance score.
+PASSED AUDITS (16)
+Show
+89
+Accessibility
+These checks highlight opportunities to improve the accessibility of your web app. Automatic detection can only detect a subset of issues and does not guarantee the accessibility of your web app, so manual testing is also encouraged.
+ARIA
+Elements use prohibited ARIA attributes
+These are opportunities to improve the usage of ARIA in your application which may enhance the experience for users of assistive technology, like a screen reader.
+CONTRAST
+Background and foreground colors do not have a sufficient contrast ratio.
+These are opportunities to improve the legibility of your content.
+TABLES AND LISTS
+<dl>'s do not contain only properly-ordered <dt> and <dd> groups, <script>, <template> or <div> elements.
+Definition list items are not wrapped in <dl> elements
+These are opportunities to improve the experience of reading tabular or list data using assistive technology, like a screen reader.
+ADDITIONAL ITEMS TO MANUALLY CHECK (10)
+Show
+These items address areas which an automated testing tool cannot cover. Learn more in our guide on conducting an accessibility review.
+PASSED AUDITS (31)
+Show
+NOT APPLICABLE (28)
+Show
+96
+Best Practices
+GENERAL
+Issues were logged in the Issues panel in Chrome Devtools
+TRUST AND SAFETY
+Ensure CSP is effective against XSS attacks
+Use a strong HSTS policy
+Ensure proper origin isolation with COOP
+Mitigate DOM-based XSS with Trusted Types
+BROWSER COMPATIBILITY
+Baseline Features
+PASSED AUDITS (12)
+Show
+NOT APPLICABLE (3)
+Show
+100
+SEO
+These checks ensure that your page is following basic search engine optimization advice. There are many additional factors Lighthouse does not score here that may affect your search ranking, including performance on Core Web Vitals. Learn more about Google Search Essentials.
+ADDITIONAL ITEMS TO MANUALLY CHECK (1)
+Hide
+Structured data is valid
+Run these additional validators on your site to check additional SEO best practices.
+PASSED AUDITS (10)
+Show
+1/2
+Agentic Browsing
+These checks ensure high-quality, browsable websites for AI agents and validate the correctness of WebMCP integrations. This category is still under development and subject to change.
+AGENT ACCESSIBILITY
+Accessibility tree is not well-formed
+These audits highlight best practices for improving the accessibility of the website for AI agents.
+PASSED AUDITS (1)
+Show
+NOT APPLICABLE (5)
+Show
+More on PageSpeed Insights
+What's new
+Documentation
+Learn about Web Performance
+Ask questions on Stack Overflow
+Mailing list
+Related Content
+Updates
+Web Fundamentals
+Case Studies
+Podcasts
+Connect
+Twitter
+Youtube
+Chrome
+Firebase
+All products
+Terms and Privacy Policy
+For details, see the Google Developers Site Policies.

@@ -5,11 +5,12 @@ const ts = require("typescript");
 
 /** Compile actual application modules in an isolated context, mocking only I/O.
  * Uses existing TypeScript + node:test; no production/test runner dependency. */
-function createLoader({ mocks = {}, env = {}, cwd } = {}) {
+function createLoader({ mocks = {}, env = {}, cwd, globals = {} } = {}) {
   const cache = new Map();
   const root = path.resolve(__dirname, "..");
   const sandbox = { Buffer, URL, Headers, Request, Response, FormData, File, TextDecoder, TextEncoder,
     crypto: globalThis.crypto, console, setTimeout, clearTimeout, process: { env: { ...env }, cwd: () => cwd || root },
+    ...globals,
   };
   const context = vm.createContext(sandbox);
   function load(filename) {

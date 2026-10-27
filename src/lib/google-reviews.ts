@@ -1,5 +1,6 @@
 import { securityEvent } from "@/lib/security/errors";
 import "server-only";
+import { z } from "zod";
 
 import type { Testimonial } from "@/lib/site";
 
@@ -79,14 +80,32 @@ type PlaceSnapshot = {
 const EMPTY: PlaceSnapshot = { reviews: null, rating: null };
 
 let cached: { at: number; value: PlaceSnapshot } | null = null;
+let inFlight: Promise<PlaceSnapshot> | null = null;
 
 async function getPlace(): Promise<PlaceSnapshot> {
   const cacheMs = cached?.value.reviews === null ? ERROR_CACHE_MS : CACHE_MS;
   if (cached && Date.now() - cached.at < cacheMs) return cached.value;
-  const fresh = await fetchPlace();
-  cached = { at: Date.now(), value: fresh };
-  return fresh;
+  // Reviews and the rating can render independently while sharing one request.
+  if (!inFlight) {
+    inFlight = fetchPlace().then((value) => {
+      cached = { at: Date.now(), value };
+      return value;
+    }).finally(() => { inFlight = null; });
+  }
+  return inFlight;
 }
+
+const placeSchema = z.object({
+  googleMapsUri: z.string().optional(),
+  rating: z.number().min(0).max(5).optional(),
+  userRatingCount: z.number().int().nonnegative().optional(),
+  reviews: z.array(z.object({
+    authorAttribution: z.object({ displayName: z.string().optional(), uri: z.string().optional() }).optional(),
+    googleMapsUri: z.string().optional(),
+    rating: z.number().min(0).max(5).optional(),
+    text: z.object({ text: z.string().optional() }).optional(),
+  })).optional(),
+});
 
 const FALLBACK_REVIEWS: GoogleReviewTestimonial[] = [
   {
@@ -197,7 +216,12 @@ async function fetchPlace(): Promise<PlaceSnapshot> {
       return EMPTY;
     }
 
-    const place = (await response.json()) as PlaceDetailsResponse;
+    const checked = placeSchema.safeParse(await response.json());
+    if (!checked.success) {
+      securityEvent("reviews_response_invalid");
+      return EMPTY;
+    }
+    const place: PlaceDetailsResponse = checked.data;
     const reviews = (place.reviews ?? [])
       .filter(
         (review): review is GoogleReview & { rating: number; text: { text: string } } =>
@@ -224,8 +248,8 @@ async function fetchPlace(): Promise<PlaceSnapshot> {
         : null;
 
     return { reviews, rating };
-  } catch {
-    securityEvent("reviews_unavailable");
+  } catch (error) {
+    securityEvent("reviews_unavailable", error);
     return EMPTY;
   }
 }

@@ -58,6 +58,7 @@ export function WhatsAppModal({
   const [selectedFabrics, setSelectedFabrics] = useState<string[]>([]);
   const [selectedUsage, setSelectedUsage] = useState<string[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [deliveryNotice, setDeliveryNotice] = useState<string | null>(null);
 
   const close = useCallback(
     (reason: "dismiss" | "success") => {
@@ -126,13 +127,18 @@ export function WhatsAppModal({
     formData.set("message", message);
     formData.set("variant", "short");
 
-    submitEnquiry(IDLE, formData).catch(() => {});
+    setDeliveryNotice(null);
+    const failedSave = () => setDeliveryNotice("We couldn’t confirm that your enquiry was saved on the website. Please continue your conversation on WhatsApp.");
+    submitEnquiry(IDLE, formData).then((result) => {
+      if (result.status === "error") failedSave();
+    }).catch(failedSave);
     track("whatsapp_click", { location: "whatsapp_form_modal" });
 
     close("success");
   };
 
   return (
+    <>
     <AnimatePresence>
       {isOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
@@ -319,5 +325,12 @@ export function WhatsAppModal({
         </div>
       ) : null}
     </AnimatePresence>
+    {deliveryNotice && (
+      <div role="status" className="border-line text-navy fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-lg rounded-lg border bg-white p-4 text-sm shadow-lg">
+        <p>{deliveryNotice}</p>
+        <button type="button" className="mt-2 min-h-11 underline" onClick={() => setDeliveryNotice(null)}>Dismiss</button>
+      </div>
+    )}
+    </>
   );
 }

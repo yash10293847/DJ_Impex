@@ -47,10 +47,10 @@ export const metadata: Metadata = buildMetadata({
 export const dynamic = "force-dynamic";
 
 export default async function JournalPage() {
-  const [lead, ...rest] = await getJournalPosts();
+  const [posts, slots] = await Promise.all([getJournalPosts(), slotMap()]);
+  const [lead, ...rest] = posts;
   const supporting = rest.slice(0, 2);
   const olderPosts = rest.slice(2);
-  const slots = await slotMap();
   const heroSlot = slots["journal-hero"];
 
   const heroImage = heroSlot?.src || "/images/footer/fabric-banner.jpg";
@@ -83,10 +83,7 @@ export default async function JournalPage() {
             quality={88}
             className="object-cover object-top opacity-70"
           />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-white/70 backdrop-blur-[0.5px]"
-          />
+          <div aria-hidden="true" className="absolute inset-0 bg-white/70 backdrop-blur-[0.5px]" />
         </div>
 
         <div className="relative z-10">

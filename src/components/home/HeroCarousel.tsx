@@ -42,10 +42,10 @@ const FILM_INTERVAL = 13000;
  * line by line, and only then does the selvedge below start to drift.
  *
  * Slides crossfade rather than slide, because the cloth should change like light
- * moving across it. Autoplay has a visible pause control (WCAG 2.2.2) and stops
- * under prefers-reduced-motion.
+ * moving across it. Slide rotation stops under prefers-reduced-motion; the
+ * film has its own playback control and saved preference.
  */
-export function HeroCarousel({ slides, whatsappHref }: { slides: HeroSlideView[]; whatsappHref: string }) {
+export function HeroCarousel({ slides }: { slides: HeroSlideView[] }) {
   const reduceMotion = useReducedMotion();
   const { open: openWhatsAppModal } = useWhatsAppPopup();
   const [emblaRef, embla] = useEmblaCarousel({ loop: true, duration: 40 }, [Fade()]);

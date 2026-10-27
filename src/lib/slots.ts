@@ -1,5 +1,6 @@
 import { securityEvent } from "@/lib/security/errors";
 import "server-only";
+import { cache } from "react";
 
 import { readCollection } from "@/lib/admin/store";
 
@@ -402,8 +403,8 @@ export async function resolveSlots(): Promise<ResolvedSlot[]> {
         },
       ]),
     );
-  } catch {
-    securityEvent("slots_store_unavailable");
+  } catch (error) {
+    securityEvent("slots_store_unavailable", error);
   }
 
   return IMAGE_SLOTS.map((slot) => {
@@ -422,6 +423,8 @@ export async function resolveSlots(): Promise<ResolvedSlot[]> {
 }
 
 /** The slots as a lookup, for a page that wants two or three of them by id. */
-export async function slotMap(): Promise<Record<string, ResolvedSlot>> {
+// Share the read across server components in this render, without caching edits
+// across requests.
+export const slotMap = cache(async (): Promise<Record<string, ResolvedSlot>> => {
   return Object.fromEntries((await resolveSlots()).map((slot) => [slot.id, slot]));
-}
+});

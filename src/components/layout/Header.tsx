@@ -51,10 +51,13 @@ export function Header({ navigation, contact }: { navigation: NavItem[]; contact
     window.addEventListener("popstate", updateHash);
 
     if (pathname === "/") {
-      const journalEl = document.getElementById("journal");
-      const contactEl = document.getElementById("contact");
+      let journalEl = document.getElementById("journal");
+      let contactEl = document.getElementById("contact");
 
       const handleIntersection = () => {
+        // The homepage sections may arrive after the navigation fallback.
+        journalEl ??= document.getElementById("journal");
+        contactEl ??= document.getElementById("contact");
         const scrollY = window.scrollY;
         const contactTop = contactEl ? contactEl.offsetTop - 300 : Infinity;
         const journalTop = journalEl ? journalEl.offsetTop - 200 : Infinity;
@@ -101,19 +104,34 @@ export function Header({ navigation, contact }: { navigation: NavItem[]; contact
       header.dataset.solid = String(solid);
     };
 
-    const hero = document.querySelector("[data-hero]");
-    if (!hero) {
-      setSolid(true);
-      return;
-    }
+    let observer: IntersectionObserver | undefined;
+    const observeHero = () => {
+      const hero = document.querySelector("[data-hero]");
+      if (!hero) {
+        setSolid(true);
+        return false;
+      }
+      setSolid(hero.getBoundingClientRect().bottom <= 72);
+      observer = new IntersectionObserver(
+        ([entry]) => setSolid(!entry.isIntersecting),
+        { rootMargin: "-72px 0px 0px 0px", threshold: 0 },
+      );
+      observer.observe(hero);
+      return true;
+    };
 
-    setSolid(false);
-    const observer = new IntersectionObserver(
-      ([entry]) => setSolid(!entry.isIntersecting),
-      { rootMargin: "-72px 0px 0px 0px", threshold: 0 },
-    );
-    observer.observe(hero);
-    return () => observer.disconnect();
+    // A streamed route can hydrate its header while the loading screen is
+    // still showing. Attach once the real hero arrives, then stop observing.
+    const pendingHero = new MutationObserver(() => {
+      if (observeHero()) pendingHero.disconnect();
+    });
+    if (!observeHero()) {
+      pendingHero.observe(document.getElementById("main") ?? document.body, { childList: true, subtree: true });
+    }
+    return () => {
+      observer?.disconnect();
+      pendingHero.disconnect();
+    };
   }, [pathname]);
 
   return (

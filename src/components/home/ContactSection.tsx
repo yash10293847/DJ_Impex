@@ -25,7 +25,7 @@ export function ContactSection({
   return (
     <section
       id="contact"
-      className="border-line relative scroll-mt-12 overflow-hidden border-t border-b bg-white pt-[calc(var(--spacing-section)*0.73)] pb-12 sm:pb-16 lg:scroll-mt-14 lg:pb-20"
+      className={`border-line relative scroll-mt-12 overflow-hidden border-t border-b bg-white pt-[calc(var(--spacing-section)*0.73)] pb-12 sm:pb-16 lg:scroll-mt-14 lg:pb-20 ${className}`.trim()}
     >
       {/* Luxury white fabric drape background */}
       <div className="pointer-events-none absolute inset-0 z-0">

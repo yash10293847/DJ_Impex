@@ -7,6 +7,13 @@ import { WhatsAppGlyph } from "@/components/ui/WhatsAppGlyph";
 import { track } from "@/lib/analytics";
 import { COUNTRY_CODES, IDLE, type EnquiryState } from "@/lib/enquiry";
 
+async function submitWithRecovery(previous: EnquiryState, data: FormData): Promise<EnquiryState> {
+  try { return await submitEnquiry(previous, data); }
+  catch {
+    return { status: "error", message: "We couldn’t confirm that your enquiry was saved. Please continue your conversation on WhatsApp." };
+  }
+}
+
 export type FabricChoice = { slug: string; name: string };
 
 const USAGE_OPTIONS = [
@@ -65,7 +72,7 @@ function EnquiryFormContent({
   focusOnMount: boolean;
   onReset: () => void;
 }) {
-  const [state, action, pending] = useActionState<EnquiryState, FormData>(submitEnquiry, IDLE);
+  const [state, action, pending] = useActionState<EnquiryState, FormData>(submitWithRecovery, IDLE);
   const id = useId();
   const [selected, setSelected] = useState<string[]>([]);
   const [selectedUsage, setSelectedUsage] = useState<string[]>([]);

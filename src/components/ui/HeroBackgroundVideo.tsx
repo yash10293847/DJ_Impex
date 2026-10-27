@@ -1,12 +1,25 @@
 "use client";
 
 import { Pause, Play } from "lucide-react";
+import { preload } from "react-dom";
 import { useReducedMotion } from "motion/react";
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import {
+  readPlaybackPreference,
+  savePlaybackPreference,
+  serverPlaybackPreference,
+  subscribePlaybackPreference,
+} from "@/lib/playback-preference";
 
-/** Manual playback choices persist when slides or autoplay preferences change. */
+/** Restore manual playback before autoplay, including on later visits. */
 export function HeroBackgroundVideo({
-  src, poster, label, active = true, autoplayAllowed = true, className, style,
+  src,
+  poster,
+  label,
+  active = true,
+  autoplayAllowed = true,
+  className,
+  style,
 }: {
   src: string;
   poster: string;
@@ -16,19 +29,44 @@ export function HeroBackgroundVideo({
   className?: string;
   style?: CSSProperties;
 }) {
+  if (active) preload(poster, { as: "image", fetchPriority: "high" });
   const videoRef = useRef<HTMLVideoElement>(null);
   const id = useId();
   const reduceMotion = useReducedMotion();
   const [manualPlayback, setManualPlayback] = useState<boolean | null>(null);
   const [playing, setPlaying] = useState(false);
-  const shouldPlay = active && (manualPlayback ?? (reduceMotion === false && autoplayAllowed));
+  const [inView, setInView] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
+  const preference = useSyncExternalStore(
+    subscribePlaybackPreference,
+    readPlaybackPreference,
+    serverPlaybackPreference,
+  );
+  const playback =
+    manualPlayback ??
+    (preference === "playing" || (preference === "auto" && reduceMotion === false && autoplayAllowed));
+  const shouldPlay = active && inView && pageVisible && preference !== "pending" && playback;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting));
+    const visibilityChanged = () => setPageVisible(!document.hidden);
+    observer.observe(video);
+    visibilityChanged();
+    document.addEventListener("visibilitychange", visibilityChanged);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", visibilityChanged);
+      video.pause();
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     if (shouldPlay) void video.play().catch(() => undefined);
     else video.pause();
-    return () => video.pause();
   }, [shouldPlay, src]);
 
   const toggle = () => {
@@ -36,6 +74,7 @@ export function HeroBackgroundVideo({
     if (!video) return;
     const next = video.paused;
     setManualPlayback(next);
+    savePlaybackPreference(next);
     // Call play during the user gesture, including when autoplay was refused.
     if (next) void video.play().catch(() => undefined);
     else video.pause();
@@ -66,7 +105,7 @@ export function HeroBackgroundVideo({
           onClick={toggle}
           aria-label={`${playing ? "Pause" : "Play"} ${label}`}
           aria-controls={id}
-          className="absolute right-4 top-24 z-30 flex min-h-11 items-center gap-2 rounded-full border border-white/60 bg-navy-deep/80 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white sm:right-8 sm:top-28"
+          className="bg-navy-deep/80 hover:bg-navy-deep absolute top-24 right-4 z-30 flex min-h-11 items-center gap-2 rounded-full border border-white/60 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white sm:top-28 sm:right-8"
         >
           {playing ? <Pause aria-hidden="true" size={16} /> : <Play aria-hidden="true" size={16} />}
           <span>{playing ? "Pause" : "Play"}</span>

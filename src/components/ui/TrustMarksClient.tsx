@@ -33,10 +33,10 @@ export function TrustMarksClient({ marks, className = "" }: TrustMarksClientProp
       {/* Animated vertical blue line starting from 0 to full length */}
       <motion.span
         aria-hidden="true"
-        initial={{ scaleY: 0, opacity: 0 }}
+        initial={reduceMotion ? false : { scaleY: 0, opacity: 0 }}
         whileInView={{ scaleY: 1, opacity: 1 }}
         viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.85, delay: 0.2, ease }}
+        transition={{ duration: reduceMotion ? 0 : 0.85, delay: reduceMotion ? 0 : 0.2, ease }}
         style={{ transformOrigin: "top" }}
         className="absolute left-0 top-0 bottom-0 w-px bg-accent"
       />

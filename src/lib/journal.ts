@@ -1,5 +1,6 @@
 import { securityEvent } from "@/lib/security/errors";
 import "server-only";
+import { cache } from "react";
 
 import readingTime from "reading-time";
 
@@ -49,16 +50,16 @@ async function panelPosts(): Promise<JournalPost[]> {
   try {
     const blogs = await readCollection("blogs");
     return blogs.filter((blog) => blog.status === "published").map(toPost);
-  } catch {
+  } catch (error) {
     // The journal is the agency's copy first. If the panel's store is
     // unreachable the MDX posts still render, rather than the page failing.
-    securityEvent("journal_store_unavailable");
+    securityEvent("journal_store_unavailable", error);
     return [];
   }
 }
 
 /** Every visible post, newest first. A panel slug never shadows an MDX one. */
-export async function getJournalPosts(): Promise<JournalPost[]> {
+export const getJournalPosts = cache(async (): Promise<JournalPost[]> => {
   const fromBrandKit: JournalPost[] = getPosts().map((post) => ({
     ...post,
     source: "brand-kit",
@@ -69,7 +70,7 @@ export async function getJournalPosts(): Promise<JournalPost[]> {
 
   merged.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || a.title.localeCompare(b.title));
   return merged;
-}
+});
 
 export async function getJournalPost(slug: string): Promise<JournalPost | undefined> {
   return (await getJournalPosts()).find((post) => post.slug === slug);
